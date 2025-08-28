@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('contacts')
     .select(
-      'id,name,company,job_title,email,phone,current_location,linkedin_url,notes,mutual_connections,experience,education,created_at,updated_at,user_id',
+      'id,name,company,job_title,email,phone,current_location,linkedin_url,notes,mutual_connections,experience,education,created_at',
       { count: 'exact' },
     )
     .eq('user_id', user.id)
@@ -44,5 +44,8 @@ export async function GET(request: NextRequest) {
   const total = count ?? 0
   const hasMore = offset + limit < total
 
-  return NextResponse.json({ contacts: data ?? [], total, hasMore })
+  return NextResponse.json(
+    { contacts: data ?? [], total, hasMore },
+    { headers: { 'Cache-Control': 'private, max-age=60' } },
+  )
 }
