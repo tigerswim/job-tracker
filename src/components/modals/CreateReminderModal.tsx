@@ -210,21 +210,21 @@ export default function CreateReminderModal({
         (contact.notes || '').toLowerCase().includes(term)
 
       // Experience search - all props checked
-      const experienceMatch = contact.experience?.some(exp =>
+      const experienceMatch = Array.isArray(contact.experience) && contact.experience.some(exp =>
         (exp.company || '').toLowerCase().includes(term) ||
         (exp.title || '').toLowerCase().includes(term) ||
         (exp.description || '').toLowerCase().includes(term)
       )
 
       // Education search - all props checked
-      const educationMatch = contact.education?.some(edu =>
+      const educationMatch = Array.isArray(contact.education) && contact.education.some(edu =>
         (edu.institution || '').toLowerCase().includes(term) ||
         (edu.degree_and_field || '').toLowerCase().includes(term) ||
         (edu.notes || '').toLowerCase().includes(term)
       )
 
       // Mutual connections search - all connections checked
-      const connectionMatch = contact.mutual_connections?.some(conn =>
+      const connectionMatch = Array.isArray(contact.mutual_connections) && contact.mutual_connections.some(conn =>
         (conn || '').toLowerCase().includes(term)
       )
 
