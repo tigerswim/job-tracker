@@ -59,12 +59,13 @@ A comprehensive job application tracking and contact management system built wit
 
 ## Installation
 
-1. **Navigate to the project**
+1. **Clone the repository**
    ```bash
-   cd kineticbrandpartners/job-tracker
+   git clone https://github.com/tigerswim/job-tracker.git
+   cd job-tracker
    ```
 
-   > **Note**: This project is part of the kineticbrandpartners monorepo at `https://github.com/tigerswim/kineticbrandpartners.git`
+   > **Note**: This is a standalone repository at `https://github.com/tigerswim/job-tracker.git`
 
 2. **Install dependencies**
    ```bash
