@@ -1,6 +1,14 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with the job-tracker project.
+
+## Project Overview
+
+job-tracker is a **standalone repository** for a job application and contact management system.
+
+- **Repository**: `https://github.com/tigerswim/job-tracker.git`
+- **Deployment**: Netlify (https://job-tracker.kineticbrandpartners.com)
+- **Tech Stack**: Next.js 15, React 19, TypeScript, Tailwind CSS 4, Supabase
 
 ## Development Commands
 
