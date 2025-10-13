@@ -916,26 +916,26 @@ export default function ContactList() {
         (contact.email || '').toLowerCase().includes(term) ||
         (contact.job_title || '').toLowerCase().includes(term) ||
         (contact.notes || '').toLowerCase().includes(term)
-      
+
       // Experience search - add null checks for company and title
-      const experienceMatch = contact.experience?.some(exp =>
+      const experienceMatch = Array.isArray(contact.experience) && contact.experience.some(exp =>
         (exp.company || '').toLowerCase().includes(term) ||
         (exp.title || '').toLowerCase().includes(term) ||
         (exp.description && exp.description.toLowerCase().includes(term))
       )
-      
+
       // Education search - add null checks for institution and degree_and_field
-      const educationMatch = contact.education?.some(edu =>
+      const educationMatch = Array.isArray(contact.education) && contact.education.some(edu =>
         (edu.institution || '').toLowerCase().includes(term) ||
         (edu.degree_and_field || '').toLowerCase().includes(term) ||
         (edu.notes && edu.notes.toLowerCase().includes(term))
       )
-      
-      // Mutual connections search - add null check for each connection
-      const connectionMatch = contact.mutual_connections?.some(conn =>
+
+      // Mutual connections search - ensure it's an array before calling .some()
+      const connectionMatch = Array.isArray(contact.mutual_connections) && contact.mutual_connections.some(conn =>
         (conn || '').toLowerCase().includes(term)
       )
-      
+
       return basicMatch || experienceMatch || educationMatch || connectionMatch
     })
   }, [contacts, debouncedSearchTerm])
