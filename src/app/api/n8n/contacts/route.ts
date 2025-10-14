@@ -14,7 +14,6 @@ function validateApiKey(request: NextRequest): boolean {
   return apiKey === validApiKey
 }
 
-// ADD THESE HELPER FUNCTIONS BEFORE THE POST FUNCTION
 // Transform experience data from snake_case to camelCase
 const transformExperience = (exp: any) => ({
   id: exp.id || `temp-${Date.now()}-${Math.random()}`,
@@ -60,6 +59,7 @@ export async function POST(request: NextRequest) {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Supabase configuration missing')
       return NextResponse.json(
         { success: false, message: 'Server configuration error' },
         { status: 500 }
@@ -68,24 +68,36 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // UPDATED CONTACT DATA OBJECT WITH TRANSFORMATIONS
+    // Check for duplicate contact (by name + company)
+    const { data: existingContacts } = await supabase
+      .from('contacts')
+      .select('id, name, company')
+      .eq('name', body.name)
+      .eq('company', body.company || '')
+      .limit(1)
+
+    if (existingContacts && existingContacts.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Contact already exists',
+          existing_contact: existingContacts[0],
+        },
+        { status: 409 }
+      )
+    }
+
+    // Map n8n data to contacts table structure
     const contactData = {
       name: body.name,
       company: body.company || null,
-      job_title: body.job_title || null,
+      job_title: body.title || body.current_position?.title || null,
       email: body.email || null,
       phone: body.phone || null,
-      linkedin_url: body.linkedin_url || null,
-      notes: body.notes || null,
-      current_location: body.current_location || null,
-      user_id: process.env.N8N_DEFAULT_USER_ID,
-      source: body.source || 'n8n automation',
-      mutual_connections: Array.isArray(body.mutual_connections) 
-        ? body.mutual_connections 
-        : body.mutual_connections 
-          ? body.mutual_connections.split(',').map((s: string) => s.trim()).filter((s: string) => s)
-          : [],
-      // ADD THESE TRANSFORMED FIELDS
+      current_location: body.location || null,
+      linkedin_url: body.linkedin || null,
+      notes: body.summary || null,
+      // Store additional structured data as proper JSONB arrays (not JSON strings)
       experience: Array.isArray(body.experience) 
         ? body.experience.map(transformExperience)
         : [],
@@ -97,32 +109,56 @@ export async function POST(request: NextRequest) {
         : [],
       certifications: Array.isArray(body.certifications)
         ? body.certifications
-        : []
+        : [],
+      user_id: process.env.N8N_DEFAULT_USER_ID,
+      source: body.source || 'n8n automation',
+      mutual_connections: Array.isArray(body.mutual_connections) 
+        ? body.mutual_connections 
+        : body.mutual_connections 
+          ? body.mutual_connections.split(',').map((s: string) => s.trim()).filter((s: string) => s)
+          : []
     }
 
-    // Insert contact
-    const { data, error } = await supabase
+    // Insert the contact
+    const { data: newContact, error } = await supabase
       .from('contacts')
       .insert([contactData])
       .select()
+      .single()
 
     if (error) {
-      console.error('Supabase error:', error)
+      console.error('Error inserting contact:', error)
       return NextResponse.json(
         { success: false, message: 'Failed to create contact', error: error.message },
         { status: 500 }
       )
     }
 
+    // Log the import
+    console.log(`[n8n] Contact created: ${newContact.name} (${newContact.company}) - ID: ${newContact.id}`)
+
     return NextResponse.json(
-      { success: true, message: 'Contact created successfully', data },
+      {
+        success: true,
+        message: 'Contact created successfully',
+        contact: {
+          id: newContact.id,
+          name: newContact.name,
+          company: newContact.company,
+          created_at: newContact.created_at,
+        },
+      },
       { status: 201 }
     )
 
   } catch (error) {
-    console.error('Error processing request:', error)
+    console.error('Error processing n8n contact:', error)
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      {
+        success: false,
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     )
   }
