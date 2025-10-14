@@ -85,6 +85,11 @@ export async function POST(request: NextRequest) {
       certifications: body.certifications ? JSON.stringify(body.certifications) : null,
       user_id: process.env.N8N_DEFAULT_USER_ID,
       source: body.source || 'n8n automation',
+      mutual_connections: Array.isArray(body.mutual_connections) 
+      ? body.mutual_connections 
+      : body.mutual_connections 
+        ? body.mutual_connections.split(',').map((s: string) => s.trim()).filter((s: string) => s)
+        : []
       // If you have a specific user_id for n8n imports, set it here
       // Otherwise, you'll need to handle user association differently
     }
