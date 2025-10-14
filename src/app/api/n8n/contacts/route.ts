@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
       education: body.education ? JSON.stringify(body.education) : null,
       skills: body.skills ? JSON.stringify(body.skills) : null,
       certifications: body.certifications ? JSON.stringify(body.certifications) : null,
+      user_id: process.env.N8N_DEFAULT_USER_ID,
       source: body.source || 'n8n automation',
       // If you have a specific user_id for n8n imports, set it here
       // Otherwise, you'll need to handle user association differently
