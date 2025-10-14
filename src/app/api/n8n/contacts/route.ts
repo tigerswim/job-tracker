@@ -19,9 +19,9 @@ const transformExperience = (exp: any) => ({
   id: exp.id || `temp-${Date.now()}-${Math.random()}`,
   company: exp.company || '',
   title: exp.title || '',
-  startdate: exp.start_date || exp.startdate || '',
-  enddate: exp.end_date || exp.enddate || '',
-  iscurrent: exp.is_current !== undefined ? exp.is_current : (exp.iscurrent || false),
+  start_date: exp.start_date || '',
+  end_date: exp.end_date || '',
+  is_current: exp.is_current !== undefined ? exp.is_current : false,
   description: exp.description || ''
 });
 
@@ -29,7 +29,7 @@ const transformExperience = (exp: any) => ({
 const transformEducation = (edu: any) => ({
   id: edu.id || `temp-${Date.now()}-${Math.random()}`,
   institution: edu.institution || '',
-  degreeandfield: edu.degree_and_field || edu.degreeandfield || '',
+  degree_and_field: edu.degree_and_field || '',
   year: edu.year || '',
   notes: edu.notes || ''
 });
