@@ -268,9 +268,24 @@ export default function ContactForm({
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
+    const { name, value } = e.target;
+
+    // Special handling for LinkedIn URL field
+    if (name === 'linkedin_url' && value.trim()) {
+      // Add https:// prefix if the URL doesn't already have a protocol
+      const trimmedValue = value.trim();
+      if (!trimmedValue.match(/^https?:\/\//i)) {
+        setFormData({
+          ...formData,
+          [name]: `https://${trimmedValue}`,
+        });
+        return;
+      }
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
   };
 

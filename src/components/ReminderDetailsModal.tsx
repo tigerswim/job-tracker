@@ -65,21 +65,38 @@ export default function ReminderDetailsModal({ reminder, onClose }: ReminderDeta
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Reminder Details</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
+    <div className="fixed inset-0 z-50 pointer-events-none">
+      {/* Backdrop - subtle, semi-transparent */}
+      <div
+        className="absolute inset-0 bg-black/20 pointer-events-auto"
+        onClick={onClose}
+      />
+
+      {/* Slide-in Panel */}
+      <div className="fixed top-0 right-0 h-full w-full md:w-[700px] lg:w-[800px] bg-white shadow-2xl pointer-events-auto transform transition-transform duration-300 ease-out animate-slide-in-right overflow-hidden flex flex-col">
+        {/* Header - Fixed at top */}
+        <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-4 py-3 text-white flex-shrink-0">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center space-x-2 flex-1 min-w-0">
+              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Mail className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-bold truncate">Reminder Details</h2>
+                <p className="text-purple-100 text-xs truncate">View reminder information</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200 flex-shrink-0 ml-2"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
           {/* Status */}
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-500">Status</span>
@@ -194,16 +211,6 @@ export default function ReminderDetailsModal({ reminder, onClose }: ReminderDeta
               <p className="text-red-700 text-sm mt-1">{reminder.error_message}</p>
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end p-6 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>

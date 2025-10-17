@@ -200,30 +200,48 @@ export default function JobForm({ job: editingJob, onJobAdded, onCancel }: JobFo
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 z-50" style={{ paddingTop: '2rem' }}>
-      <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-scale-in">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-white">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <Briefcase className="w-5 h-5" />
+    <div className="fixed inset-0 z-50 pointer-events-none">
+      {/* Backdrop - subtle, semi-transparent */}
+      <div
+        className="absolute inset-0 bg-black/20 pointer-events-auto"
+        onClick={onCancel}
+      />
+
+      {/* Slide-in Panel */}
+      <div className="fixed top-0 right-0 h-full w-full md:w-[700px] lg:w-[800px] bg-white shadow-2xl pointer-events-auto transform transition-transform duration-300 ease-out animate-slide-in-right overflow-hidden flex flex-col">
+        {/* Header - Fixed at top */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 text-white flex-shrink-0">
+          <div className="flex flex-col space-y-3">
+            {/* Top row - Title and Close button */}
+            <div className="flex justify-between items-start">
+              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Briefcase className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-bold truncate">
+                    {editingJob ? 'Edit Job Application' : 'New Job Application'}
+                  </h2>
+                  <p className="text-blue-100 text-xs truncate">
+                    {editingJob ? 'Update job application details' : 'Track a new job opportunity'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold">
-                  {editingJob ? 'Edit Job Application' : 'New Job Application'}
-                </h2>
-                <p className="text-blue-100 text-sm">
-                  {editingJob ? 'Update job application details' : 'Track a new job opportunity'}
-                </p>
-              </div>
+              <button
+                onClick={onCancel}
+                className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200 flex-shrink-0 ml-2"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
+
+            {/* Bottom row - Action buttons */}
             <div className="flex items-center space-x-2">
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-4 py-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200"
                 disabled={loading}
+                className="px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -231,7 +249,7 @@ export default function JobForm({ job: editingJob, onJobAdded, onCancel }: JobFo
                 type="submit"
                 form="job-form"
                 disabled={loading || !form.company.trim() || !form.job_title.trim()}
-                className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className="flex-1 px-3 py-2 text-sm bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 {loading ? (
                   <>
@@ -242,18 +260,12 @@ export default function JobForm({ job: editingJob, onJobAdded, onCancel }: JobFo
                   <span>{editingJob ? "Update Job" : "Add Job"}</span>
                 )}
               </button>
-              <button
-                onClick={onCancel}
-                className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
           </div>
         </div>
 
-        {/* Form Content */}
-        <div className="p-8 overflow-y-auto max-h-[calc(90vh-120px)] custom-scrollbar">
+        {/* Form Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
           {/* Error Display */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">

@@ -440,51 +440,57 @@ export default function CreateReminderModal({
   if (!isOpen) return null
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 z-50"
-      style={{ paddingTop: '2rem' }}
-      onClick={(e) => e.target === e.currentTarget && handleClose()}
-    >
-      <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-scale-in">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-8 py-6 text-white">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                {showSuccess ? (
-                  <Check className="w-5 h-5" />
-                ) : (
-                  <Mail className="w-5 h-5" />
-                )}
+    <div className="fixed inset-0 z-50 pointer-events-none">
+      {/* Backdrop - subtle, semi-transparent */}
+      <div
+        className="absolute inset-0 bg-black/20 pointer-events-auto"
+        onClick={handleClose}
+      />
+
+      {/* Slide-in Panel */}
+      <div className="fixed top-0 right-0 h-full w-full md:w-[700px] lg:w-[800px] bg-white shadow-2xl pointer-events-auto transform transition-transform duration-300 ease-out animate-slide-in-right overflow-hidden flex flex-col">
+        {/* Header - Fixed at top */}
+        <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-4 py-3 text-white flex-shrink-0">
+          <div className="flex flex-col space-y-3">
+            {/* Top row - Title and Close button */}
+            <div className="flex justify-between items-start">
+              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  {showSuccess ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <Mail className="w-4 h-4" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-bold truncate">
+                    {showSuccess ?
+                      `Reminder ${isEditingMode ? 'Updated' : 'Created'}!` :
+                      `${isEditingMode ? 'Edit' : 'Schedule'} Email Reminder`
+                    }
+                  </h2>
+                  <p className="text-purple-100 text-xs truncate">
+                    {showSuccess
+                      ? `Your reminder has been ${isEditingMode ? 'updated' : 'scheduled'} successfully`
+                      : `${isEditingMode ? 'Update your reminder' : 'Get reminded to follow up at the perfect time'}`
+                    }
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold">
-                  {showSuccess ? 
-                    `Reminder ${isEditingMode ? 'Updated' : 'Created'}!` : 
-                    `${isEditingMode ? 'Edit' : 'Schedule'} Email Reminder`
-                  }
-                </h2>
-                <p className="text-purple-100 text-sm">
-                  {showSuccess 
-                    ? `Your reminder has been ${isEditingMode ? 'updated' : 'scheduled'} successfully`
-                    : `${isEditingMode ? 'Update your reminder' : 'Get reminded to follow up at the perfect time'}`
-                  }
-                </p>
-              </div>
+              <button
+                onClick={handleClose}
+                disabled={isSubmitting}
+                className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200 disabled:opacity-50 flex-shrink-0 ml-2"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <button
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200 disabled:opacity-50"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
 
         {/* Success State */}
         {showSuccess ? (
-          <div className="p-8 text-center">
+          <div className="flex-1 overflow-y-auto p-8 text-center custom-scrollbar">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-green-600" />
             </div>
@@ -499,7 +505,7 @@ export default function CreateReminderModal({
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-8 overflow-y-auto max-h-[calc(90vh-120px)] custom-scrollbar">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 custom-scrollbar">
             <div className="space-y-6">
               {/* Error Alert */}
               {errors.submit && (
