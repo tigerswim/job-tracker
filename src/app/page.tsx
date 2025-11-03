@@ -9,6 +9,7 @@ import ContactList from '@/components/ContactList'
 import CSVManager from '@/components/CSVManager'
 import Reporting from '@/components/Reporting'
 import LoginForm from '@/components/LoginForm'
+import ExtensionAuthSync from '@/components/ExtensionAuthSync'
 import { 
   Briefcase, 
   Users, 
@@ -153,6 +154,8 @@ export default function Home() {
   // Show main app if authenticated
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+      {/* Sync auth with Chrome extension */}
+      <ExtensionAuthSync />
       {/* Top Header */}
       <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto">

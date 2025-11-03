@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Tracker - Quick Import</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <div class="logo-section">
+        <div class="logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <path d="M20 8v6M23 11h-6"></path>
+          </svg>
+        </div>
+        <div class="title">
+          <h1>Job Tracker</h1>
+          <p>Quick Import</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Status -->
+  <div id="authStatus" class="auth-status hidden">
+    <div class="auth-message">
+      <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>Please log in to Job Tracker first</span>
+    </div>
+    <a href="https://job-tracker.kineticbrandpartners.com" target="_blank" class="btn btn-primary">
+      Open Job Tracker
+    </a>
+  </div>
+
+  <!-- Main Content -->
+  <div id="mainContent" class="main-content">
+    <!-- Loading State -->
+    <div id="loadingState" class="loading-state">
+      <div class="spinner"></div>
+      <p>Extracting job details...</p>
+    </div>
+
+    <!-- Job Form -->
+    <div id="jobForm" class="job-form hidden">
+      <form id="addJobForm">
+        <div class="form-group">
+          <label for="jobTitle">Job Title <span class="required">*</span></label>
+          <input type="text" id="jobTitle" name="job_title" required placeholder="e.g., Senior Software Engineer">
+        </div>
+
+        <div class="form-group">
+          <label for="company">Company <span class="required">*</span></label>
+          <input type="text" id="company" name="company" required placeholder="e.g., Google">
+        </div>
+
+        <div class="form-group">
+          <label for="location">Location</label>
+          <input type="text" id="location" name="location" placeholder="e.g., San Francisco, CA">
+        </div>
+
+        <div class="form-group">
+          <label for="salary">Salary Range</label>
+          <input type="text" id="salary" name="salary" placeholder="e.g., $120k - $180k">
+        </div>
+
+        <div class="form-group">
+          <label for="status">Status</label>
+          <select id="status" name="status">
+            <option value="interested">Interested</option>
+            <option value="applied">Applied</option>
+            <option value="interviewing">Interviewing</option>
+            <option value="onhold">On Hold</option>
+            <option value="offered">Offered</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="jobUrl">Job URL</label>
+          <input type="url" id="jobUrl" name="job_url" placeholder="Auto-filled from current page" readonly>
+        </div>
+
+        <div class="form-group">
+          <label for="jobDescription">Job Description</label>
+          <textarea id="jobDescription" name="job_description" rows="4" placeholder="Auto-extracted from page"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="notes">Notes</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Add any personal notes..."></textarea>
+        </div>
+
+        <div class="button-group">
+          <button type="button" id="cancelBtn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="submitBtn" class="btn btn-primary">
+            <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 6L9 17l-5-5"></path>
+            </svg>
+            Add to Job Tracker
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Success State -->
+    <div id="successState" class="success-state hidden">
+      <div class="success-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+      </div>
+      <h2>Job Added Successfully!</h2>
+      <p>The job has been added to your Job Tracker.</p>
+      <div class="button-group">
+        <button id="addAnotherBtn" class="btn btn-secondary">Add Another</button>
+        <a href="https://job-tracker.kineticbrandpartners.com" target="_blank" class="btn btn-primary">
+          View in Job Tracker
+        </a>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="error-state hidden">
+      <div class="error-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+      </div>
+      <h2>Oops! Something went wrong</h2>
+      <p id="errorMessage">Unable to add job. Please try again.</p>
+      <button id="retryBtn" class="btn btn-primary">Try Again</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <a href="https://job-tracker.kineticbrandpartners.com" target="_blank">Open Dashboard</a>
+    <span class="separator">•</span>
+    <a href="#" id="settingsLink">Settings</a>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
