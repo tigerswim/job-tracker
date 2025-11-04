@@ -393,7 +393,7 @@ export default function JobForm({ job: editingJob, onJobAdded, onCancel }: JobFo
               <textarea
                 value={form.job_description}
                 onChange={handleChange('job_description')}
-                className="input min-h-[120px] resize-none"
+                className="input min-h-[120px] resize-y"
                 placeholder="Paste the job description, key requirements, or responsibilities..."
                 rows={5}
               />
@@ -411,7 +411,7 @@ export default function JobForm({ job: editingJob, onJobAdded, onCancel }: JobFo
               <textarea
                 value={form.notes}
                 onChange={handleChange('notes')}
-                className="input min-h-[100px] resize-none"
+                className="input min-h-[100px] resize-y"
                 placeholder="Add your thoughts, research notes, or application strategy..."
                 rows={4}
               />

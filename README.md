@@ -5,14 +5,16 @@ A comprehensive job application tracking and contact management system built wit
 ## Features
 
 ### 🎯 Job Management
-- **Application Tracking**: Track job applications with statuses (interested, applied, interviewing, on hold, offered, rejected)
+- **Application Tracking**: Track job applications with statuses (bookmarked, interested, applied, interviewing, on hold, offered, rejected, withdrawn, no response)
 - **Detailed Information**: Store job title, company, location, salary, job URL, description, and personal notes
+- **Resizable Text Fields**: User-adjustable height for job descriptions and notes for better content management
 - **Status Management**: Visual status indicators and filtering
 - **Application Timeline**: Track application dates and progression
 
-### 👥 Contact Management  
+### 👥 Contact Management
 - **Professional Network**: Maintain detailed contact profiles with work experience, education, and personal notes
 - **Rich Contact Profiles**: Store email, phone, location, LinkedIn profiles, current role, and detailed work history
+- **n8n Integration**: Automated contact import with LinkedIn URL auto-formatting (adds https:// prefix automatically)
 - **Contact-Job Linking**: Associate contacts with specific job applications and track relationships
 - **Interaction Tracking**: Log all communications and touchpoints with contacts
 
@@ -30,9 +32,10 @@ A comprehensive job application tracking and contact management system built wit
 
 ### 📊 Reporting & Analytics
 - **Application Analytics**: Visual insights into job search progress
-- **Contact Statistics**: Network growth and engagement metrics  
+- **Contact Statistics**: Network growth and engagement metrics
 - **Performance Tracking**: Success rates and timeline analysis
-- **Data Export**: CSV export functionality for external analysis
+- **Complete Data Export**: CSV export with all database fields (including user_id, created_at, updated_at) for full data portability
+- **Data Import**: CSV import with duplicate detection, date format conversion, and validation
 
 ### 🎨 Enhanced UI/UX
 - **Responsive Design**: Optimized for desktop and mobile devices
@@ -161,9 +164,12 @@ A comprehensive job application tracking and contact management system built wit
 ## API Routes
 
 - `GET/POST /api/contacts` - Contact management
+- `POST /api/n8n/contacts` - n8n automation endpoint for contact import with LinkedIn URL formatting
 - `GET/POST /api/reminders` - Reminder system
 - `GET /api/reminders/stats` - Reminder analytics
 - `PUT/DELETE /api/reminders/[id]` - Individual reminder management
+- `GET/POST /api/jobs` - Job application management
+- `GET/POST /api/interactions` - Interaction tracking
 
 ## Contributing
 
