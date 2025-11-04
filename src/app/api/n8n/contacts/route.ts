@@ -87,6 +87,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Helper function to add https:// prefix to LinkedIn URLs if not present
+    const formatLinkedInUrl = (url: string | null | undefined): string | null => {
+      if (!url) return null
+      const trimmedUrl = url.trim()
+      if (!trimmedUrl) return null
+      // Check if URL already has a protocol
+      if (!/^https?:\/\//i.test(trimmedUrl)) {
+        return `https://${trimmedUrl}`
+      }
+      return trimmedUrl
+    }
+
     // Map n8n data to contacts table structure
     const contactData = {
       name: body.name,
@@ -95,7 +107,7 @@ export async function POST(request: NextRequest) {
       email: body.email || null,
       phone: body.phone || null,
       current_location: body.location || null,
-      linkedin_url: body.linkedin || null,
+      linkedin_url: formatLinkedInUrl(body.linkedin),
       notes: body.summary || null,
       // Store additional structured data as proper JSONB arrays (not JSON strings)
       experience: Array.isArray(body.experience) 

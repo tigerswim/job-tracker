@@ -16,7 +16,7 @@ const DATE_FIELDS = {
 export async function downloadJobsCSV() {
   const jobs = await fetchJobs()
   const csvContent = convertToCSV(jobs, [
-    'id', 'job_title', 'company', 'location', 'salary', 'job_url', 'status', 'applied_date', 'job_description', 'notes'
+    'id', 'job_title', 'company', 'location', 'salary', 'job_url', 'status', 'applied_date', 'job_description', 'notes', 'user_id', 'created_at', 'updated_at'
   ])
   downloadCSV(csvContent, 'jobs.csv')
 }
@@ -167,9 +167,9 @@ export async function downloadContactsCSV() {
   const maxEducation = Math.max(...contacts.map(c => c.education?.length || 0), 0)
   const maxMutualConnections = Math.max(...contacts.map(c => c.mutual_connections?.length || 0), 0)
   
-  // Create base fields - Updated to include current_location
+  // Create base fields - Updated to include current_location, user_id, created_at, updated_at
   const baseFields = [
-    'id', 'name', 'email', 'phone', 'current_location', 'company', 'job_title', 'linkedin_url', 'notes'
+    'id', 'name', 'email', 'phone', 'current_location', 'company', 'job_title', 'linkedin_url', 'notes', 'user_id', 'created_at', 'updated_at'
   ]
   
   // Add flattened experience fields
@@ -247,7 +247,7 @@ export async function downloadContactsCSV() {
 export async function downloadInteractionsCSV() {
   const interactions = await getInteractions()
   const csvContent = convertToCSV(interactions, [
-    'id', 'contact_id', 'type', 'date', 'summary', 'notes'
+    'id', 'contact_id', 'type', 'date', 'summary', 'notes', 'user_id', 'created_at', 'updated_at'
   ])
   downloadCSV(csvContent, 'interactions.csv')
 }

@@ -308,7 +308,7 @@ const UploadResultsDisplay = ({ uploadResults }: { uploadResults: {[key: string]
       icon: Briefcase,
       color: 'blue',
       downloadFn: downloadJobsCSV,
-      fields: ['job_title', 'company', 'location', 'salary', 'status', 'date_added', 'notes']
+      fields: ['job_title', 'company', 'location', 'salary', 'status', 'applied_date', 'job_description', 'notes', 'user_id', 'created_at', 'updated_at']
     },
     {
       id: 'contacts',
@@ -317,7 +317,7 @@ const UploadResultsDisplay = ({ uploadResults }: { uploadResults: {[key: string]
       icon: Users,
       color: 'green',
       downloadFn: downloadContactsCSV,
-      fields: ['name', 'email', 'phone', 'current_location', 'company', 'job_title', 'linkedin_url', 'notes']
+      fields: ['name', 'email', 'phone', 'current_location', 'company', 'job_title', 'linkedin_url', 'notes', 'experience', 'education', 'mutual_connections', 'user_id', 'created_at', 'updated_at']
     },
     {
       id: 'interactions',
@@ -326,7 +326,7 @@ const UploadResultsDisplay = ({ uploadResults }: { uploadResults: {[key: string]
       icon: MessageCircle,
       color: 'purple',
       downloadFn: downloadInteractionsCSV,
-      fields: ['contact_id', 'type (email/phone/video_call/linkedin/meeting/other)', 'date', 'summary', 'notes']
+      fields: ['contact_id', 'type (email/phone/video_call/linkedin/meeting/other)', 'date', 'summary', 'notes', 'user_id', 'created_at', 'updated_at']
     }
   ]
 
