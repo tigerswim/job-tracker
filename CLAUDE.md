@@ -83,6 +83,21 @@ All API routes follow consistent patterns:
 - Search functionality via Supabase `ilike` queries
 - Proper TypeScript typing for request/response objects
 
+### n8n Automation Integration
+**Contact Update via PDF Processing** (`/api/n8n/contacts`):
+- **Automated workflow**: PDFs dropped in `/data/resumes/incoming/` are processed every 5 minutes
+- **LinkedIn URL matching**: Primary method for identifying existing contacts
+  - If LinkedIn URL matches existing contact → **UPDATE** with new data
+  - If no match found → **CREATE** new contact
+- **Smart data merging**:
+  - PDF data takes priority (all fields replaced with new data)
+  - Historical data preserved in `notes` field with timestamps
+  - Old experience/education entries archived in JSON format
+  - User-entered notes preserved after historical data
+- **Authentication**: API key-based (`x-api-key` header with `N8N_API_KEY` env var)
+- **Cost**: ~$0.02-0.03 per resume (Claude API for data extraction)
+- **Workflow**: PDF → pdfjs-dist extraction → Claude API → POST to endpoint → Move to processed folder
+
 ### Component Architecture
 - Client components use `'use client'` directive
 - Supabase client created via `createClientComponentClient()`
