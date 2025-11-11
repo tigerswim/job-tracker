@@ -93,6 +93,143 @@ Create a new contact.
 }
 ```
 
+### POST /api/n8n/contacts
+
+**n8n Automation Endpoint** - Create or update a contact from automated PDF resume processing.
+
+**Authentication:**
+- Requires `x-api-key` header with value matching `N8N_API_KEY` environment variable
+- Uses `SUPABASE_SERVICE_ROLE_KEY` for direct database access
+- Assigns contacts to user specified in `N8N_DEFAULT_USER_ID` environment variable
+
+**Matching Logic:**
+- **LinkedIn URL Matching (Primary)**: If `linkedin` field is provided, checks for existing contact with matching `linkedin_url`
+- **If match found**: Updates existing contact, preserves historical data in notes
+- **If no match**: Creates new contact
+
+**Request Body:**
+```json
+{
+  "name": "John Doe",
+  "title": "Senior Software Engineer",
+  "company": "Tech Corp",
+  "location": "San Francisco, CA",
+  "phone": "+1 (555) 123-4567",
+  "email": "john@example.com",
+  "linkedin": "linkedin.com/in/johndoe",
+  "website": "https://johndoe.com",
+  "summary": "Experienced software engineer with 10+ years in tech",
+  "skills": ["JavaScript", "React", "Node.js"],
+  "current_position": {
+    "title": "Senior Software Engineer",
+    "company": "Tech Corp",
+    "start_year": "2020",
+    "duration": "4 years"
+  },
+  "experience": [
+    {
+      "company": "Tech Corp",
+      "title": "Senior Software Engineer",
+      "start_date": "2020-06",
+      "end_date": "",
+      "duration": "4 years",
+      "is_current": true
+    },
+    {
+      "company": "Previous Company",
+      "title": "Software Engineer",
+      "start_date": "2015-03",
+      "end_date": "2020-05",
+      "duration": "5 years",
+      "is_current": false
+    }
+  ],
+  "education": [
+    {
+      "institution": "Stanford University",
+      "degree_and_field": "Bachelor's in Computer Science",
+      "year": "2015-06"
+    }
+  ],
+  "certifications": ["AWS Certified Solutions Architect"],
+  "mutual_connections": ["Jane Smith", "Bob Johnson"],
+  "source": "LinkedIn PDF"
+}
+```
+
+**Response (Create):**
+```json
+{
+  "success": true,
+  "message": "Contact created successfully",
+  "contact": {
+    "id": "new-uuid",
+    "name": "John Doe",
+    "company": "Tech Corp",
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+**Response (Update):**
+```json
+{
+  "success": true,
+  "message": "Contact updated successfully",
+  "updated": true,
+  "contact": {
+    "id": "existing-uuid",
+    "name": "John Doe",
+    "company": "Tech Corp",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+**Update Behavior:**
+- **PDF data takes priority**: All fields are replaced with new data from PDF
+- **Historical preservation**: Old data is archived in `notes` field with timestamps:
+  - Previous experience entries (JSON format)
+  - Previous education entries (JSON format)
+  - Previous contact info for changed fields (name, company, title, email, phone, location)
+- **Existing user notes**: Preserved and appended after historical data
+- **LinkedIn URL auto-formatting**: Automatically adds `https://` prefix if missing
+
+**Error Responses:**
+
+401 Unauthorized:
+```json
+{
+  "success": false,
+  "message": "Unauthorized - Invalid API key"
+}
+```
+
+400 Bad Request:
+```json
+{
+  "success": false,
+  "message": "Name is required"
+}
+```
+
+500 Internal Server Error:
+```json
+{
+  "success": false,
+  "message": "Failed to create/update contact",
+  "error": "Error details"
+}
+```
+
+**n8n Workflow Integration:**
+1. PDF dropped in `/data/resumes/incoming/` folder
+2. n8n workflow processes PDF every 5 minutes
+3. Extracts text using pdfjs-dist
+4. Sends to Claude API for structured data extraction (~$0.02-0.03 per resume)
+5. POSTs structured data to this endpoint
+6. Moves PDF to `/data/resumes/processed/` folder
+
 ## Reminders API
 
 ### GET /api/reminders

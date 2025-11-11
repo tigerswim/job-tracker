@@ -68,25 +68,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Check for duplicate contact (by name + company)
-    const { data: existingContacts } = await supabase
-      .from('contacts')
-      .select('id, name, company')
-      .eq('name', body.name)
-      .eq('company', body.company || '')
-      .limit(1)
-
-    if (existingContacts && existingContacts.length > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Contact already exists',
-          existing_contact: existingContacts[0],
-        },
-        { status: 409 }
-      )
-    }
-
     // Helper function to add https:// prefix to LinkedIn URLs if not present
     const formatLinkedInUrl = (url: string | null | undefined): string | null => {
       if (!url) return null
@@ -99,6 +80,23 @@ export async function POST(request: NextRequest) {
       return trimmedUrl
     }
 
+    // Format the incoming LinkedIn URL
+    const formattedLinkedInUrl = formatLinkedInUrl(body.linkedin)
+
+    // Check for existing contact by LinkedIn URL (primary matching method)
+    let existingContact = null
+    if (formattedLinkedInUrl) {
+      const { data: linkedInMatch } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('linkedin_url', formattedLinkedInUrl)
+        .limit(1)
+
+      if (linkedInMatch && linkedInMatch.length > 0) {
+        existingContact = linkedInMatch[0]
+      }
+    }
+
     // Map n8n data to contacts table structure
     const contactData = {
       name: body.name,
@@ -107,31 +105,105 @@ export async function POST(request: NextRequest) {
       email: body.email || null,
       phone: body.phone || null,
       current_location: body.location || null,
-      linkedin_url: formatLinkedInUrl(body.linkedin),
+      linkedin_url: formattedLinkedInUrl,
       notes: body.summary || null,
       // Store additional structured data as proper JSONB arrays (not JSON strings)
-      experience: Array.isArray(body.experience) 
+      experience: Array.isArray(body.experience)
         ? body.experience.map(transformExperience)
         : [],
       education: Array.isArray(body.education)
         ? body.education.map(transformEducation)
         : [],
-      skills: Array.isArray(body.skills) 
-        ? body.skills 
+      skills: Array.isArray(body.skills)
+        ? body.skills
         : [],
       certifications: Array.isArray(body.certifications)
         ? body.certifications
         : [],
       user_id: process.env.N8N_DEFAULT_USER_ID,
       source: body.source || 'n8n automation',
-      mutual_connections: Array.isArray(body.mutual_connections) 
-        ? body.mutual_connections 
-        : body.mutual_connections 
+      mutual_connections: Array.isArray(body.mutual_connections)
+        ? body.mutual_connections
+        : body.mutual_connections
           ? body.mutual_connections.split(',').map((s: string) => s.trim()).filter((s: string) => s)
           : []
     }
 
-    // Insert the contact
+    // If existing contact found, UPDATE it with historical data preservation
+    if (existingContact) {
+      // Build historical notes from old data
+      const timestamp = new Date().toISOString()
+      const historicalNotes: string[] = []
+
+      // Preserve old experience data
+      if (existingContact.experience && Array.isArray(existingContact.experience) && existingContact.experience.length > 0) {
+        historicalNotes.push(`\n--- Previous Experience (archived ${timestamp}) ---\n${JSON.stringify(existingContact.experience, null, 2)}`)
+      }
+
+      // Preserve old education data
+      if (existingContact.education && Array.isArray(existingContact.education) && existingContact.education.length > 0) {
+        historicalNotes.push(`\n--- Previous Education (archived ${timestamp}) ---\n${JSON.stringify(existingContact.education, null, 2)}`)
+      }
+
+      // Preserve old simple field data if different from new data
+      const oldFieldData: any = {}
+      if (existingContact.name !== contactData.name) oldFieldData.name = existingContact.name
+      if (existingContact.company !== contactData.company) oldFieldData.company = existingContact.company
+      if (existingContact.job_title !== contactData.job_title) oldFieldData.job_title = existingContact.job_title
+      if (existingContact.email !== contactData.email) oldFieldData.email = existingContact.email
+      if (existingContact.phone !== contactData.phone) oldFieldData.phone = existingContact.phone
+      if (existingContact.current_location !== contactData.current_location) oldFieldData.current_location = existingContact.current_location
+
+      if (Object.keys(oldFieldData).length > 0) {
+        historicalNotes.push(`\n--- Previous Contact Info (archived ${timestamp}) ---\n${JSON.stringify(oldFieldData, null, 2)}`)
+      }
+
+      // Combine historical notes with existing notes and new summary
+      const updatedNotes = [
+        ...(historicalNotes.length > 0 ? historicalNotes : []),
+        ...(existingContact.notes ? [existingContact.notes] : []),
+      ].join('\n\n')
+
+      // Update the existing contact
+      const { data: updatedContact, error } = await supabase
+        .from('contacts')
+        .update({
+          ...contactData,
+          notes: updatedNotes || contactData.notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingContact.id)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error updating contact:', error)
+        return NextResponse.json(
+          { success: false, message: 'Failed to update contact', error: error.message },
+          { status: 500 }
+        )
+      }
+
+      // Log the update
+      console.log(`[n8n] Contact updated: ${updatedContact.name} (${updatedContact.company}) - ID: ${updatedContact.id}`)
+
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'Contact updated successfully',
+          updated: true,
+          contact: {
+            id: updatedContact.id,
+            name: updatedContact.name,
+            company: updatedContact.company,
+            updated_at: updatedContact.updated_at,
+          },
+        },
+        { status: 200 }
+      )
+    }
+
+    // If no existing contact found, INSERT new contact
     const { data: newContact, error } = await supabase
       .from('contacts')
       .insert([contactData])
