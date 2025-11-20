@@ -8,7 +8,7 @@ import JobList from '@/components/JobList'
 import ContactList from '@/components/ContactList'
 import CSVManager from '@/components/CSVManager'
 import Reporting from '@/components/Reporting'
-import LoginForm from '@/components/LoginForm'
+import LandingPage from '@/components/LandingPage'
 import ExtensionAuthSync from '@/components/ExtensionAuthSync'
 import { 
   Briefcase, 
@@ -115,9 +115,9 @@ export default function Home() {
     )
   }
 
-  // Show login form if not authenticated
+  // Show landing page if not authenticated
   if (!user) {
-    return <LoginForm />
+    return <LandingPage />
   }
 
   const navigationItems = [
