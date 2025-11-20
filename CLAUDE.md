@@ -68,10 +68,21 @@ Core tables managed via Supabase:
 
 ## Key Components
 
+### Landing Page (`src/components/LandingPage.tsx`)
+Marketing landing page shown to unauthenticated users:
+- **Design**: Split-screen layout with Montserrat Black headlines and Manrope Regular body text
+- **Copy**: Tweet-sized (under 280 chars), personality-driven messaging
+- **CTA**: "See Who Can Help You in 30 Seconds" - transformational value proposition
+- **Preview**: Accurate 3-column grid showing Network tab with 6 anonymized contact cards
+- **Authentication**: Modal with Google OAuth (primary) + email/password (secondary)
+- **Fonts**: Custom font pairing for impact and readability
+
 ### Main Application (`src/app/page.tsx`)
+Shows landing page for unauthenticated users, dashboard for authenticated users.
+
 Tab-based dashboard with four main sections:
 - **Job Pipeline**: Job application tracking with status filters
-- **Network**: Contact management with pagination and search
+- **Network**: Contact management with pagination and search (3-column grid layout)
 - **Reporting**: Analytics and insights dashboard
 - **Data Hub**: CSV import/export functionality
 
