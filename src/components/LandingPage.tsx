@@ -81,16 +81,8 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid lg:grid-cols-2 gap-12 items-start lg:items-center">
             {/* Left side - Content */}
-            <div className="text-center lg:text-left flex flex-col justify-center" style={{ minHeight: '600px' }}>
-              {/* Rocket icon */}
-              <div className="flex justify-center lg:justify-start mb-8">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-blue-600/20 blur-3xl rounded-full animate-pulse" />
-                  <Rocket className="relative w-20 h-20 text-blue-600" strokeWidth={1.5} />
-                </div>
-              </div>
-
-              {/* Tweet-sized headline (under 280 chars) */}
+            <div className="text-center lg:text-left flex flex-col justify-start" style={{ minHeight: '600px' }}>
+              {/* Tweet-sized headline (under 280 chars) - aligned with preview top */}
               <h1 className={`text-5xl sm:text-6xl lg:text-7xl font-black text-slate-900 mb-6 leading-tight ${montserrat.className}`}>
                 Your network knows where the jobs are.
               </h1>
