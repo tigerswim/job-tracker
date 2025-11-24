@@ -30,15 +30,15 @@ export default function ReminderDetailsModal({ reminder, onClose }: ReminderDeta
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+        return 'bg-amber-100 text-amber-800 border-amber-300'
       case 'sent':
-        return 'bg-green-100 text-green-800 border-green-200'
+        return 'bg-green-100 text-green-800 border-green-300'
       case 'failed':
-        return 'bg-red-100 text-red-800 border-red-200'
+        return 'bg-red-100 text-red-800 border-red-300'
       case 'cancelled':
-        return 'bg-gray-100 text-gray-800 border-gray-200'
+        return 'bg-slate-100 text-slate-800 border-slate-300'
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
+        return 'bg-slate-100 text-slate-800 border-slate-300'
     }
   }
 
@@ -75,7 +75,7 @@ export default function ReminderDetailsModal({ reminder, onClose }: ReminderDeta
       {/* Slide-in Panel */}
       <div className="fixed top-0 right-0 h-full w-full md:w-[700px] lg:w-[800px] bg-white shadow-2xl pointer-events-auto transform transition-transform duration-300 ease-out animate-slide-in-right overflow-hidden flex flex-col">
         {/* Header - Fixed at top */}
-        <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-4 py-3 text-white flex-shrink-0">
+        <div className="bg-gradient-to-br from-violet-600 to-purple-700 px-4 py-3 text-white flex-shrink-0 border-b-2 border-violet-600">
           <div className="flex justify-between items-start">
             <div className="flex items-center space-x-2 flex-1 min-w-0">
               <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -83,7 +83,7 @@ export default function ReminderDetailsModal({ reminder, onClose }: ReminderDeta
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-lg font-bold truncate">Reminder Details</h2>
-                <p className="text-purple-100 text-xs truncate">View reminder information</p>
+                <p className="text-violet-100 text-xs truncate">View reminder information</p>
               </div>
             </div>
             <button

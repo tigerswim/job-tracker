@@ -175,7 +175,7 @@ export default function JobContactManager({ jobId, onClose }: JobContactManagerP
       {/* Slide-in Panel */}
       <div className="fixed top-0 right-0 h-full w-full md:w-[700px] lg:w-[800px] bg-white shadow-2xl pointer-events-auto transform transition-transform duration-300 ease-out animate-slide-in-right overflow-hidden flex flex-col">
         {/* Header - Fixed at top */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 text-white flex-shrink-0">
+        <div className="bg-gradient-to-br from-slate-900 to-slate-700 px-4 py-3 text-white flex-shrink-0 border-b-2 border-slate-600">
           <div className="flex flex-col space-y-3">
             {/* Top row - Title and Close button */}
             <div className="flex justify-between items-start">
@@ -185,7 +185,7 @@ export default function JobContactManager({ jobId, onClose }: JobContactManagerP
                 </div>
                 <div className="min-w-0 flex-1">
                   <h2 className="text-lg font-bold truncate">Manage Job Contacts</h2>
-                  <p className="text-blue-100 text-xs truncate">
+                  <p className="text-slate-300 text-xs truncate">
                     Link contacts to this job application
                   </p>
                 </div>
@@ -203,7 +203,7 @@ export default function JobContactManager({ jobId, onClose }: JobContactManagerP
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3 py-2 text-sm bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200"
+                className="px-3 py-2 text-sm bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 Done
               </button>
@@ -249,7 +249,7 @@ export default function JobContactManager({ jobId, onClose }: JobContactManagerP
                   {linkedContacts.map((contact) => (
                     <div
                       key={contact.id}
-                      className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg"
+                      className="flex items-center justify-between p-4 bg-green-50 border-2 border-green-200 rounded-lg hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group"
                     >
                       <div className="flex-1">
                         <div className="font-medium text-slate-900">{contact.name}</div>
@@ -347,7 +347,7 @@ export default function JobContactManager({ jobId, onClose }: JobContactManagerP
                   {filteredAvailableContacts.map((contact) => (
                     <div
                       key={contact.id}
-                      className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-all duration-200"
+                      className="flex items-center justify-between p-4 bg-slate-50 border-2 border-slate-200 rounded-lg hover:shadow-md hover:-translate-y-0.5 hover:border-slate-300 transition-all duration-200 group"
                     >
                       <div className="flex-1">
                         <div className="font-medium text-slate-900">{contact.name}</div>
@@ -361,7 +361,7 @@ export default function JobContactManager({ jobId, onClose }: JobContactManagerP
                       <button
                         onClick={() => handleLinkContact(contact.id)}
                         disabled={linking === contact.id}
-                        className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-2 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                        className="flex items-center gap-2 text-white bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-sm font-medium px-3 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
                       >
                         {linking === contact.id ? (
                           <>

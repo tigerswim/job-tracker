@@ -17,76 +17,76 @@ const BLANK = {
 };
 
 const statusOptions = [
-  { 
-    id: 'bookmarked', 
+  {
+    id: 'bookmarked',
     title: 'Bookmarked',
     description: 'Review in more detail',
-    color: 'text-slate-600',
-    bg: 'bg-slate-50',
-    border: 'border-slate-200'
+    color: 'text-blue-700',
+    bg: 'bg-blue-50',
+    border: 'border-blue-200'
   },
-  { 
-    id: 'interested', 
+  {
+    id: 'interested',
     title: 'Interested',
     description: 'Job looks promising',
-    color: 'text-slate-600',
-    bg: 'bg-slate-50',
-    border: 'border-slate-200'
+    color: 'text-emerald-700',
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-200'
   },
-  { 
-    id: 'applied', 
+  {
+    id: 'applied',
     title: 'Applied',
     description: 'Application submitted',
-    color: 'text-blue-600',
-    bg: 'bg-blue-50',
-    border: 'border-blue-200'
+    color: 'text-sky-700',
+    bg: 'bg-sky-50',
+    border: 'border-sky-200'
   },
-  { 
-    id: 'interviewing', 
+  {
+    id: 'interviewing',
     title: 'Interviewing',
     description: 'In interview process',
-    color: 'text-blue-700',
-    bg: 'bg-blue-100',
-    border: 'border-blue-300'
+    color: 'text-violet-700',
+    bg: 'bg-violet-50',
+    border: 'border-violet-300'
   },
-  { 
-    id: 'offered', 
+  {
+    id: 'offered',
     title: 'Offered',
     description: 'Received job offer',
-    color: 'text-blue-600',
-    bg: 'bg-blue-50',
-    border: 'border-blue-200'
+    color: 'text-green-700',
+    bg: 'bg-green-50',
+    border: 'border-green-300'
   },
-  { 
-    id: 'onhold', 
+  {
+    id: 'onhold',
     title: 'On Hold',
     description: 'Position on hold',
-    color: 'text-slate-500',
-    bg: 'bg-slate-100',
-    border: 'border-slate-300'
+    color: 'text-amber-700',
+    bg: 'bg-amber-50',
+    border: 'border-amber-200'
   },
-    { 
-    id: 'withdrawn', 
+    {
+    id: 'withdrawn',
     title: 'Withdrawn',
     description: 'Removed myself',
-    color: 'text-slate-500',
+    color: 'text-slate-600',
     bg: 'bg-slate-100',
-    border: 'border-slate-300'
-  },
-  { 
-    id: 'rejected', 
-    title: 'Rejected',
-    description: 'Candidacy declined',
-    color: 'text-slate-500',
-    bg: 'bg-slate-50',
     border: 'border-slate-200'
   },
-  { 
-    id: 'noresponse', 
+  {
+    id: 'rejected',
+    title: 'Rejected',
+    description: 'Candidacy declined',
+    color: 'text-slate-600',
+    bg: 'bg-slate-100',
+    border: 'border-slate-200'
+  },
+  {
+    id: 'noresponse',
     title: 'No Response',
     description: 'Ghosted',
-    color: 'text-slate-500',
-    bg: 'bg-slate-50',
+    color: 'text-slate-600',
+    bg: 'bg-slate-100',
     border: 'border-slate-200'
   }
 ];
@@ -210,7 +210,7 @@ export default function JobForm({ job: editingJob, onJobAdded, onCancel }: JobFo
       {/* Slide-in Panel */}
       <div className="fixed top-0 right-0 h-full w-full md:w-[700px] lg:w-[800px] bg-white shadow-2xl pointer-events-auto transform transition-transform duration-300 ease-out animate-slide-in-right overflow-hidden flex flex-col">
         {/* Header - Fixed at top */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 text-white flex-shrink-0">
+        <div className="bg-gradient-to-br from-slate-900 to-slate-700 px-4 py-3 text-white flex-shrink-0 border-b-2 border-slate-600">
           <div className="flex flex-col space-y-3">
             {/* Top row - Title and Close button */}
             <div className="flex justify-between items-start">
@@ -249,7 +249,7 @@ export default function JobForm({ job: editingJob, onJobAdded, onCancel }: JobFo
                 type="submit"
                 form="job-form"
                 disabled={loading || !form.company.trim() || !form.job_title.trim()}
-                className="flex-1 px-3 py-2 text-sm bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                className="flex-1 px-3 py-2 text-sm bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
               >
                 {loading ? (
                   <>
@@ -322,10 +322,10 @@ export default function JobForm({ job: editingJob, onJobAdded, onCancel }: JobFo
                     key={option.id}
                     type="button"
                     onClick={() => setForm({ ...form, status: option.id as any })}
-                    className={`p-4 rounded-lg border-2 text-left transition-all duration-200 ${
+                    className={`group p-4 rounded-lg border-2 text-left transition-all duration-200 ${
                       form.status === option.id
-                        ? `${option.bg} ${option.border} ${option.color} border-opacity-100 shadow-sm transform scale-105`
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                        ? `${option.bg} ${option.border} ${option.color} border-opacity-100 shadow-md transform scale-105`
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5'
                     }`}
                   >
                     <div className="font-semibold text-sm">{option.title}</div>

@@ -1,18 +1,18 @@
-// src/components/ContactList.tsx - Performance Optimized Version with Reminder Button
+// src/components/ContactList.tsx - V2 Aesthetic
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react'
 import { Contact } from '@/lib/supabase'
 import { getContactsLite, getContactById, deleteContact } from '@/lib/contacts'
 import { getJobsForContacts } from '@/lib/jobContacts'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Users, 
-  Mail, 
-  Phone, 
-  Building, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Users,
+  Mail,
+  Phone,
+  Building,
   Edit,
   Trash2,
   X,
@@ -31,6 +31,10 @@ import ContactForm from './ContactForm'
 import ContactJobLinks from './ContactJobLinks'
 import ContactFilter from './ContactFilter'
 import CreateReminderModal from './modals/CreateReminderModal'
+import { DM_Sans, Archivo } from 'next/font/google'
+
+const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '700'] })
+const archivo = Archivo({ subsets: ['latin'], weight: ['600', '700', '800'] })
 
 // Lazy-loaded InteractionList to avoid loading it until needed
 import { lazy, Suspense } from 'react'
@@ -199,23 +203,26 @@ const ContactCard = memo(({
 
   return (
     <div
-      className={`card p-3 cursor-pointer transition-all duration-200 animate-slide-up relative ${
+      className={`bg-white border-2 p-3 cursor-pointer transition-all duration-200 animate-slide-up relative rounded-xl shadow-sm group ${
         isSelected
-          ? 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/50'
-          : 'hover:shadow-lg hover:scale-[1.02]'
-      }`}
-      style={{ animationDelay: `${index * 30}ms` }}
+          ? 'border-slate-900 bg-slate-50 shadow-md translate-y-0'
+          : 'border-slate-200 hover:shadow-lg hover:border-slate-300 hover:-translate-y-1'
+      } ${dmSans.className}`}
+      style={{
+        animationDelay: `${index * 30}ms`,
+        borderLeft: isSelected ? '4px solid #0f172a' : undefined
+      }}
       onClick={() => onClick(contact.id)}
     >
       {/* Header with name and actions */}
       <div className="flex justify-between items-start mb-2">
         <div className="flex items-center space-x-2 flex-1 min-w-0">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm group-hover:bg-indigo-600 transition-colors duration-200">
             <User className="w-4 h-4 text-white" />
           </div>
-          
+
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-bold text-slate-800 truncate">{contact.name}</h3>
+            <h3 className={`text-sm font-bold text-slate-900 truncate ${archivo.className}`}>{contact.name}</h3>
           </div>
         </div>
 
@@ -1020,36 +1027,36 @@ export default function ContactList() {
       <div className="space-y-4 lg:space-y-0">
         {/* Desktop and Tablet: Single row with search and actions (768px and up) */}
         <div className="hidden lg:flex justify-between items-center gap-4">
-          {/* Search Bar */}
+          {/* Search Bar - V2 Style */}
           <div className="relative flex-1 max-w-2xl">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Search contacts by name, company, email, experience, education, or connections..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input pl-10 w-full"
+              className={`w-full px-4 py-3 pl-12 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors ${dmSans.className}`}
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             )}
           </div>
 
           <div className="flex items-center space-x-3">
-            <span className="text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+            <span className={`text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-2 rounded-lg border-2 border-slate-200 ${dmSans.className}`}>
               {filteredContacts.length} contact{filteredContacts.length !== 1 ? 's' : ''}
             </span>
-            
+
             <button
               onClick={() => setShowForm(true)}
-              className="btn-primary flex items-center space-x-2"
+              className={`flex items-center space-x-2 px-6 py-3 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 transition-all duration-200 shadow-md hover:shadow-lg ${dmSans.className}`}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               <span>Add Contact</span>
             </button>
           </div>
@@ -1059,15 +1066,15 @@ export default function ContactList() {
         <div className="lg:hidden">
           {/* Action buttons row */}
           <div className="flex justify-between items-center mb-4">
-            <span className="text-lg font-semibold text-slate-800">Contacts</span>
+            <span className={`text-lg font-bold text-slate-900 ${archivo.className}`}>Contacts</span>
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+              <span className={`text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-2 rounded-lg border-2 border-slate-200 ${dmSans.className}`}>
                 {filteredContacts.length}
               </span>
-              
+
               <button
                 onClick={() => setShowForm(true)}
-                className="btn-primary flex items-center space-x-2"
+                className={`flex items-center space-x-2 px-4 py-2 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 transition-all duration-200 shadow-md ${dmSans.className}`}
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">Add Contact</span>
@@ -1078,20 +1085,20 @@ export default function ContactList() {
 
           {/* Search Bar - Full width on mobile */}
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Search contacts..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input pl-10 w-full"
+              className={`w-full px-4 py-3 pl-12 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors ${dmSans.className}`}
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             )}
           </div>

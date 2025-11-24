@@ -613,7 +613,7 @@ export default function ContactForm({
       {/* Slide-in Panel */}
       <div className="fixed top-0 right-0 h-full w-full md:w-[700px] lg:w-[800px] bg-white shadow-2xl pointer-events-auto transform transition-transform duration-300 ease-out animate-slide-in-right overflow-hidden flex flex-col">
         {/* Header - Fixed at top */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 text-white flex-shrink-0">
+        <div className="bg-gradient-to-br from-slate-900 to-slate-700 px-4 py-3 text-white flex-shrink-0 border-b-2 border-slate-600">
           <div className="flex flex-col space-y-3">
             {/* Top row - Title and Close button */}
             <div className="flex justify-between items-start">
@@ -653,7 +653,7 @@ export default function ContactForm({
                 type="submit"
                 form="contact-form"
                 disabled={loading}
-                className="flex-1 px-3 py-2 text-sm bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                className="flex-1 px-3 py-2 text-sm bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
               >
                 {loading ? (
                   <>

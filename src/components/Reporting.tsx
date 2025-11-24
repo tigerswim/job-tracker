@@ -206,9 +206,9 @@ interface ContactModalProps {
 function ContactModal({ contact, onClose }: ContactModalProps) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden animate-scale-in">
+      <div className="bg-white/95 backdrop-blur-xl rounded-2xl border-2 border-slate-200 shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden animate-scale-in">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-white">
+        <div className="bg-gradient-to-br from-slate-900 to-slate-700 px-6 py-4 text-white border-b-2 border-slate-600">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -341,9 +341,9 @@ function InteractionModal({ interaction, onClose }: InteractionModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden animate-scale-in">
+      <div className="bg-white/95 backdrop-blur-xl rounded-2xl border-2 border-slate-200 shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden animate-scale-in">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 text-white">
+        <div className="bg-gradient-to-br from-emerald-600 to-green-700 px-6 py-4 text-white border-b-2 border-emerald-600">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -428,9 +428,9 @@ interface StatsCardProps {
 
 function StatsCard({ title, value, subtitle, icon: Icon, trend, color }: StatsCardProps) {
   return (
-    <div className="bg-white/60 backdrop-blur-sm rounded-xl border border-slate-200/60 shadow-sm p-4 hover:shadow-md transition-all duration-200">
+    <div className="bg-white/60 backdrop-blur-sm rounded-xl border-2 border-slate-200 shadow-sm p-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group">
       <div className="flex items-center justify-between mb-2">
-        <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${color} flex items-center justify-center`}>
+        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-200`}>
           <Icon className="w-4 h-4 text-white" />
         </div>
         {trend && (
@@ -805,12 +805,15 @@ export default function Reporting() {
           <div className="grid grid-cols-4 divide-x divide-slate-200/60">
             <button
               onClick={() => setActiveSection('overview')}
-              className={`p-3 text-center transition-all duration-200 ${
+              className={`p-3 text-center transition-all duration-200 relative ${
                 activeSection === 'overview'
                   ? 'bg-white/80 text-purple-700 font-medium'
                   : 'text-slate-600 hover:bg-white/40'
               } ${activeSection === 'overview' ? 'rounded-l-xl' : ''}`}
             >
+              {activeSection === 'overview' && (
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-gradient-to-r from-purple-500 via-violet-500 to-purple-500 rounded-full" />
+              )}
               <div className="flex items-center justify-center space-x-2">
                 <BarChart3 className="w-4 h-4" />
                 <span className="text-sm">Overview</span>
@@ -822,12 +825,15 @@ export default function Reporting() {
 
             <button
               onClick={() => setActiveSection('contacts')}
-              className={`p-3 text-center transition-all duration-200 ${
+              className={`p-3 text-center transition-all duration-200 relative ${
                 activeSection === 'contacts'
                   ? 'bg-white/80 text-blue-700 font-medium'
                   : 'text-slate-600 hover:bg-white/40'
               }`}
             >
+              {activeSection === 'contacts' && (
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-gradient-to-r from-blue-500 via-sky-500 to-blue-500 rounded-full" />
+              )}
               <div className="flex items-center justify-center space-x-2">
                 <Users className="w-4 h-4" />
                 <span className="text-sm">Contacts</span>
@@ -839,12 +845,15 @@ export default function Reporting() {
 
             <button
               onClick={() => setActiveSection('interactions')}
-              className={`p-3 text-center transition-all duration-200 ${
+              className={`p-3 text-center transition-all duration-200 relative ${
                 activeSection === 'interactions'
                   ? 'bg-white/80 text-green-700 font-medium'
                   : 'text-slate-600 hover:bg-white/40'
               }`}
             >
+              {activeSection === 'interactions' && (
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-500 rounded-full" />
+              )}
               <div className="flex items-center justify-center space-x-2">
                 <MessageCircle className="w-4 h-4" />
                 <span className="text-sm">Interactions</span>
@@ -857,12 +866,15 @@ export default function Reporting() {
             {/* New Reminders tab */}
             <button
               onClick={() => setActiveSection('reminders')}
-              className={`p-3 text-center transition-all duration-200 ${
+              className={`p-3 text-center transition-all duration-200 relative ${
                 activeSection === 'reminders'
                   ? 'bg-white/80 text-purple-700 font-medium'
                   : 'text-slate-600 hover:bg-white/40'
               } ${activeSection === 'reminders' ? 'rounded-r-xl' : ''}`}
             >
+              {activeSection === 'reminders' && (
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-gradient-to-r from-purple-500 via-violet-500 to-purple-500 rounded-full" />
+              )}
               <div className="flex items-center justify-center space-x-2">
                 <Bell className="w-4 h-4" />
                 <span className="text-sm">Reminders</span>
@@ -933,7 +945,7 @@ export default function Reporting() {
                       <div
                         key={interaction.id}
                         onClick={() => setSelectedInteraction(interaction)}
-                        className="p-3 rounded-lg hover:bg-slate-50/80 cursor-pointer transition-colors group"
+                        className="p-3 rounded-lg hover:bg-slate-50/80 cursor-pointer transition-all duration-200 group hover:shadow-md hover:-translate-y-0.5"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
@@ -1114,12 +1126,13 @@ export default function Reporting() {
                     {filteredAndSortedContacts.map((contact) => (
                       <tr
                         key={contact.id}
-                        className="hover:bg-slate-50/50 cursor-pointer transition-colors"
+                        className="hover:bg-slate-50/50 cursor-pointer transition-all duration-200 group relative"
                         onClick={() => setSelectedContact(contact)}
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 relative">
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-r" />
                           <div className="text-sm">
-                            <div className="font-medium text-slate-900 hover:text-blue-600 transition-colors">
+                            <div className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">
                               {contact.name || '—'}
                             </div>
                             <div className="text-xs text-slate-500">
@@ -1227,10 +1240,11 @@ export default function Reporting() {
                     {filteredAndSortedInteractions.map((interaction) => (
                       <tr
                         key={interaction.id}
-                        className="hover:bg-slate-50/50 cursor-pointer transition-colors"
+                        className="hover:bg-slate-50/50 cursor-pointer transition-all duration-200 group relative"
                         onClick={() => setSelectedInteraction(interaction)}
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 relative">
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-500 to-green-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-r" />
                           <div className="text-sm">
                             <div className="font-medium text-slate-900">
                               {new Date(interaction.date).toLocaleDateString('en-US', {
