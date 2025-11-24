@@ -333,16 +333,16 @@ const UploadResultsDisplay = ({ uploadResults }: { uploadResults: {[key: string]
   const getColorClasses = (color: string, variant: 'primary' | 'secondary' = 'primary') => {
     const colors = {
       blue: {
-        primary: 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800',
+        primary: 'bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800',
         secondary: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
       },
       green: {
-        primary: 'bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800',
-        secondary: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+        primary: 'bg-gradient-to-br from-emerald-600 to-green-700 text-white hover:from-emerald-700 hover:to-green-800',
+        secondary: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
       },
       purple: {
-        primary: 'bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800',
-        secondary: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+        primary: 'bg-gradient-to-br from-violet-600 to-purple-700 text-white hover:from-violet-700 hover:to-purple-800',
+        secondary: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100'
       }
     }
     return colors[color as keyof typeof colors][variant]
@@ -417,10 +417,10 @@ const UploadResultsDisplay = ({ uploadResults }: { uploadResults: {[key: string]
           const isUploading = uploading === dataType.id
           
           return (
-            <div key={dataType.id} className="card p-6">
+            <div key={dataType.id} className="card p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group border-2 border-slate-200">
               {/* Header */}
               <div className="flex items-center space-x-3 mb-4">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getColorClasses(dataType.color, 'secondary')} border`}>
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getColorClasses(dataType.color, 'secondary')} border-2 shadow-sm group-hover:shadow-md transition-all duration-200`}>
                   <Icon className="w-6 h-6" />
                 </div>
                 <div>

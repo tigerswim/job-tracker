@@ -450,7 +450,7 @@ export default function CreateReminderModal({
       {/* Slide-in Panel */}
       <div className="fixed top-0 right-0 h-full w-full md:w-[700px] lg:w-[800px] bg-white shadow-2xl pointer-events-auto transform transition-transform duration-300 ease-out animate-slide-in-right overflow-hidden flex flex-col">
         {/* Header - Fixed at top */}
-        <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-4 py-3 text-white flex-shrink-0">
+        <div className="bg-gradient-to-br from-violet-600 to-purple-700 px-4 py-3 text-white flex-shrink-0 border-b-2 border-violet-600">
           <div className="flex flex-col space-y-3">
             {/* Top row - Title and Close button */}
             <div className="flex justify-between items-start">
@@ -813,7 +813,7 @@ export default function CreateReminderModal({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center space-x-2"
+                  className="px-6 py-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center space-x-2 shadow-sm hover:shadow-md"
                 >
                   {isSubmitting ? (
                     <>

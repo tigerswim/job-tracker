@@ -1,4 +1,4 @@
-// src/app/page.tsx - V2 Dashboard with refined aesthetic
+// src/app/page-v2.tsx - V2 Dashboard with refined aesthetic
 'use client'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
@@ -8,7 +8,7 @@ import JobList from '@/components/JobList'
 import ContactList from '@/components/ContactList'
 import CSVManager from '@/components/CSVManager'
 import Reporting from '@/components/Reporting'
-import LandingPage from '@/components/LandingPageV2'
+import LandingPageV2 from '@/components/LandingPageV2'
 import ExtensionAuthSync from '@/components/ExtensionAuthSync'
 import {
   Briefcase,
@@ -23,28 +23,24 @@ import { DM_Sans, Archivo } from 'next/font/google'
 const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '700'] })
 const archivo = Archivo({ subsets: ['latin'], weight: ['600', '700', '800'] })
 
-export default function Home() {
+export default function HomeV2() {
   const [activeTab, setActiveTab] = useState<'jobs' | 'contacts' | 'reporting' | 'csv'>('jobs')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Initialize Supabase client using createClientComponentClient
   const supabase = createClientComponentClient()
 
-  // Fixed useEffect with proper async handling
   useEffect(() => {
     let mounted = true
 
     async function initializeAuth() {
       try {
-        // Get initial session
         const { data: { session } } = await supabase.auth.getSession()
         if (!mounted) return
-        
+
         setUser(session?.user ?? null)
         setLoading(false)
 
-        // Set up auth state listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           (_event, session) => {
             if (!mounted) return
@@ -52,7 +48,6 @@ export default function Home() {
           }
         )
 
-        // Return cleanup function
         return () => {
           subscription.unsubscribe()
         }
@@ -80,28 +75,18 @@ export default function Home() {
 
   const handleSignOut = async () => {
     try {
-      // Sign out from Supabase
       await supabase.auth.signOut()
-      
-      // Clear any stored Google OAuth state
+
       if (typeof window !== 'undefined') {
-        // Clear any Google OAuth related localStorage
         localStorage.removeItem('supabase.auth.token')
         localStorage.removeItem('supabase.auth.expires_at')
-        
-        // Force Google to show account picker on next sign-in
-        // by clearing any cached OAuth state
         sessionStorage.clear()
-        
-        // Optional: Clear other auth-related storage
         localStorage.removeItem('supabase.auth.refresh_token')
       }
-      
-      // Force a page reload to ensure clean state
+
       window.location.reload()
     } catch (error) {
       console.error('Error during sign out:', error)
-      // Fallback: force reload anyway
       window.location.reload()
     }
   }
@@ -120,9 +105,8 @@ export default function Home() {
     )
   }
 
-  // Show landing page if not authenticated
   if (!user) {
-    return <LandingPage />
+    return <LandingPageV2 />
   }
 
   const navigationItems = [
@@ -156,7 +140,7 @@ export default function Home() {
     <div className={`min-h-screen bg-slate-50 ${dmSans.className}`}>
       <ExtensionAuthSync />
 
-      {/* Top Header - V2 Refined Style */}
+      {/* Top Header - Refined with V2 aesthetic */}
       <header className="bg-white border-b-2 border-slate-200 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between h-16 px-6">
@@ -213,7 +197,7 @@ export default function Home() {
                     <div className="flex items-center space-x-3">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${
                         isActive
-                          ? 'bg-gradient-to-br from-slate-900 to-slate-700 shadow-lg'
+                          ? 'bg-slate-900 shadow-lg'
                           : 'bg-slate-100 group-hover:bg-slate-200'
                       }`}>
                         <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-600'}`} />
@@ -228,9 +212,9 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Active indicator - gradient accent */}
+                    {/* Active indicator */}
                     {isActive && (
-                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 rounded-full shadow-sm" />
+                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-slate-900 rounded-full" />
                     )}
                   </button>
                 )

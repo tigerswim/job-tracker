@@ -1,4 +1,4 @@
-// src/components/JobList.tsx - Added Reminder Button
+// src/components/JobList.tsx - V2 Aesthetic
 'use client'
 
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react'
@@ -13,6 +13,10 @@ import JobContactLinks from './JobContactLinks'
 import ContactForm from './ContactForm'
 import ContactJobLinks from './ContactJobLinks'
 import CreateReminderModal from './modals/CreateReminderModal'
+import { DM_Sans, Archivo } from 'next/font/google'
+
+const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '700'] })
+const archivo = Archivo({ subsets: ['latin'], weight: ['600', '700', '800'] })
 
 // Types
 interface JobListState {
@@ -407,8 +411,9 @@ const JobTableRow = memo(({
   }, [job, onCreateReminder])
 
   return (
-    <tr className="hover:bg-slate-50/50">
-      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+    <tr className="hover:bg-slate-50/50 group relative transition-all duration-200">
+      <td className="px-4 py-3 text-sm font-medium text-gray-900 relative">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-r" />
         {job.job_title}
       </td>
       <td className="px-4 py-3 text-sm text-gray-600">
@@ -548,31 +553,31 @@ const EmptyState = memo(({
 
 EmptyState.displayName = 'EmptyState'
 
-// Memoized status filter component
-const StatusFilter = memo(({ 
-  statusCounts, 
-  statusFilter, 
-  onStatusChange 
+// Memoized status filter component - V2 Style
+const StatusFilter = memo(({
+  statusCounts,
+  statusFilter,
+  onStatusChange
 }: {
   statusCounts: Record<string, number>
   statusFilter: string
   onStatusChange: (status: string) => void
 }) => (
-  <div className="flex flex-wrap gap-2 bg-white/50 p-2 rounded-lg">
+  <div className={`flex flex-wrap gap-2 bg-slate-50 p-3 rounded-xl border-2 border-slate-200 ${dmSans.className}`}>
     {/* Always show All Jobs first */}
     <button
       onClick={() => onStatusChange('all')}
-      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
         statusFilter === 'all'
-          ? 'bg-blue-600 text-white'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          ? 'bg-slate-900 text-white shadow-md'
+          : 'bg-white text-slate-600 hover:bg-slate-100 border-2 border-slate-200'
       }`}
     >
       All Jobs
-      <span className={`text-xs px-2 py-0.5 rounded-full ${
+      <span className={`text-xs px-2 py-0.5 rounded-md ${
         statusFilter === 'all'
           ? 'bg-white/20 text-white'
-          : 'bg-gray-200 text-gray-600'
+          : 'bg-slate-100 text-slate-600'
       }`}>
         {statusCounts.all || 0}
       </span>
@@ -584,23 +589,23 @@ const StatusFilter = memo(({
       .sort(([a], [b]) => a.localeCompare(b)) // Sort alphabetically
       .map(([status, count]) => {
         const isActive = statusFilter === status
-        
+
         return (
           <button
             key={status}
             onClick={() => onStatusChange(status)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
               isActive
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border-2 border-slate-200'
             }`}
           >
             {/* Capitalize first letter for display */}
             {status.charAt(0).toUpperCase() + status.slice(1)}
-            <span className={`text-xs px-2 py-0.5 rounded-full ${
+            <span className={`text-xs px-2 py-0.5 rounded-md ${
               isActive
                 ? 'bg-white/20 text-white'
-                : 'bg-gray-200 text-gray-600'
+                : 'bg-slate-100 text-slate-600'
             }`}>
               {count}
             </span>
@@ -988,36 +993,36 @@ export default function JobList() {
       <div className="space-y-4 lg:space-y-0">
         {/* Desktop and Tablet: Single row with search and actions (1024px and up) */}
         <div className="hidden lg:flex justify-between items-center gap-4">
-          {/* Search Bar - Wider like Network page */}
+          {/* Search Bar - V2 Style */}
           <div className="relative flex-1 max-w-2xl">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Search jobs by company, title, or notes..."
               value={searchTerm}
               onChange={handleSearchChange}
-              className="input pl-10 w-full"
+              className={`w-full px-4 py-3 pl-12 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors ${dmSans.className}`}
             />
             {searchTerm && (
               <button
                 onClick={handleSearchClear}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             )}
           </div>
 
           <div className="flex items-center space-x-3">
-            <span className="text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+            <span className={`text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-2 rounded-lg border-2 border-slate-200 ${dmSans.className}`}>
               {processedJobs.length} application{processedJobs.length !== 1 ? 's' : ''}
             </span>
-            
+
             <button
               onClick={handleAddJob}
-              className="btn-primary flex items-center space-x-2"
+              className={`flex items-center space-x-2 px-6 py-3 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 transition-all duration-200 shadow-md hover:shadow-lg ${dmSans.className}`}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               <span>Add Job</span>
             </button>
           </div>
@@ -1027,15 +1032,15 @@ export default function JobList() {
         <div className="lg:hidden">
           {/* Action buttons row */}
           <div className="flex justify-between items-center mb-4">
-            <span className="text-lg font-semibold text-slate-800">Jobs</span>
+            <span className={`text-lg font-bold text-slate-900 ${archivo.className}`}>Jobs</span>
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+              <span className={`text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-2 rounded-lg border-2 border-slate-200 ${dmSans.className}`}>
                 {processedJobs.length}
               </span>
-              
+
               <button
                 onClick={handleAddJob}
-                className="btn-primary flex items-center space-x-2"
+                className={`flex items-center space-x-2 px-4 py-2 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 transition-all duration-200 shadow-md ${dmSans.className}`}
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">Add Job</span>
@@ -1046,20 +1051,20 @@ export default function JobList() {
 
           {/* Search Bar - Full width on mobile */}
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Search jobs..."
               value={searchTerm}
               onChange={handleSearchChange}
-              className="input pl-10 w-full"
+              className={`w-full px-4 py-3 pl-12 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors ${dmSans.className}`}
             />
             {searchTerm && (
               <button
                 onClick={handleSearchClear}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             )}
           </div>
@@ -1075,15 +1080,15 @@ export default function JobList() {
 
       {/* Jobs Table */}
       {processedJobs.length === 0 ? (
-        <EmptyState 
+        <EmptyState
           hasJobs={state.jobs.length > 0}
           onAddJob={handleAddJob}
         />
       ) : (
-        <div className="glass rounded-xl overflow-hidden">
+        <div className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 table-fixed">
-              <thead className="bg-slate-50/50">
+            <table className={`min-w-full divide-y-2 divide-slate-200 table-fixed ${dmSans.className}`}>
+              <thead className="bg-slate-50">
                 <tr>
                   <SortableHeader
                     field="job_title"
@@ -1120,15 +1125,15 @@ export default function JobList() {
                     onSort={handleSort}
                     className="w-[10%] min-w-[80px] hidden lg:table-cell"
                   />
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[14%] min-w-[120px] hidden xl:table-cell">
+                  <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wide w-[14%] min-w-[120px] hidden xl:table-cell">
                     Contacts
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[17%] min-w-[140px] sticky right-0 bg-slate-50/50">
+                  <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wide w-[17%] min-w-[140px] sticky right-0 bg-slate-50">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y-2 divide-slate-200 bg-white">
                 {processedJobs.map((job) => (
                   <JobTableRow
                     key={job.id}
