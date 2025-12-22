@@ -14,6 +14,7 @@ A comprehensive job application tracking and contact management system built wit
 ### 👥 Contact Management
 - **Professional Network**: Maintain detailed contact profiles with work experience, education, and personal notes
 - **Rich Contact Profiles**: Store email, phone, location, LinkedIn profiles, current role, and detailed work history
+- **Intelligent Search**: Search across names, companies, experience, education, and mutual connections with smart name-based ordering
 - **n8n Integration**: Automated contact import with LinkedIn URL auto-formatting (adds https:// prefix automatically)
 - **Contact-Job Linking**: Associate contacts with specific job applications and track relationships
 - **Interaction Tracking**: Log all communications and touchpoints with contacts

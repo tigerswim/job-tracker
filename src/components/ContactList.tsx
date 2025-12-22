@@ -923,7 +923,7 @@ export default function ContactList() {
     }
 
     const term = debouncedSearchTerm.toLowerCase()
-    return contacts.filter(contact => {
+    const filtered = contacts.filter(contact => {
       // Basic fields - add null checks before toLowerCase()
       const basicMatch = (contact.name || '').toLowerCase().includes(term) ||
         (contact.company || '').toLowerCase().includes(term) ||
@@ -951,6 +951,23 @@ export default function ContactList() {
       )
 
       return basicMatch || experienceMatch || educationMatch || connectionMatch
+    })
+
+    // Sort results by name to prioritize direct name matches
+    return filtered.sort((a, b) => {
+      const nameA = (a.name || '').toLowerCase()
+      const nameB = (b.name || '').toLowerCase()
+
+      // Check if either name contains the search term
+      const aNameMatch = nameA.includes(term)
+      const bNameMatch = nameB.includes(term)
+
+      // Prioritize contacts whose name contains the search term
+      if (aNameMatch && !bNameMatch) return -1
+      if (!aNameMatch && bNameMatch) return 1
+
+      // If both match or both don't match, sort alphabetically by name
+      return nameA.localeCompare(nameB)
     })
   }, [contacts, debouncedSearchTerm])
 
