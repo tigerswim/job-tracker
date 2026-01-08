@@ -3,7 +3,9 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Contact, Interaction } from '@/lib/supabase'
+import { Contact, Interaction, Job } from '@/lib/supabase'
+import { getJobs } from '@/lib/jobs'
+import { getContacts as fetchAllContacts } from '@/lib/contacts'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   BarChart3,
@@ -37,6 +39,11 @@ import dynamic from 'next/dynamic'
 
 const RemindersManagement = dynamic(
   () => import('./RemindersManagement'),
+  { ssr: false }
+)
+
+const ChartsSection = dynamic(
+  () => import('./charts/ChartsSection'),
   { ssr: false }
 )
 
@@ -482,6 +489,8 @@ function QuickActions() {
 export default function Reporting() {
   const [contacts, setContacts] = useState<ContactWithJobs[]>([])
   const [interactions, setInteractions] = useState<InteractionWithContact[]>([])
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [contactsForCharts, setContactsForCharts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   // Updated to include reminders in the active section type
   const [activeSection, setActiveSection] = useState<ReportingSection>('overview')
@@ -522,7 +531,7 @@ export default function Reporting() {
       console.log('Reporting: Loading data for user:', user?.id, 'email:', user?.email)
       if (!mounted || !user) { setLoading(false); return }
 
-      const [contactsData, interactionsData] = await Promise.all([
+      const [contactsData, interactionsData, jobsData, allContactsData] = await Promise.all([
         rpcReportingContacts({
           userId: user.id,
           sort: 'last_interaction',
@@ -530,7 +539,9 @@ export default function Reporting() {
           limit: 10000,
           offset: 0
         }),
-        rpcReportingRecentInteractions({ userId: user.id, limit: 500 })
+        rpcReportingRecentInteractions({ userId: user.id, limit: 500 }),
+        getJobs(),
+        fetchAllContacts()
       ])
 
       // Debug logging
@@ -655,6 +666,8 @@ export default function Reporting() {
       if (mounted) {
         setContacts(mappedContacts)
         setInteractions(mappedInteractions)
+        setJobs(jobsData)
+        setContactsForCharts(allContactsData)
         setLoading(false)
       }
     }
@@ -928,6 +941,14 @@ export default function Reporting() {
                 color="from-orange-500 to-orange-600"
               />
             </div>
+
+            {/* Progress Charts */}
+            <ChartsSection
+              interactions={interactions}
+              jobs={jobs}
+              contacts={contactsForCharts}
+              isLoading={loading}
+            />
 
             {/* Dashboard grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
