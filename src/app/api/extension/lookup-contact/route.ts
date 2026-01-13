@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       // PGRST116 = no rows returned (not an error for us)
       console.error('Lookup contact error:', error)
       return NextResponse.json(
-        { found: false, error: 'Database error' },
+        { found: false, error: 'Database error', details: error.message, code: error.code },
         { status: 500 }
       )
     }
