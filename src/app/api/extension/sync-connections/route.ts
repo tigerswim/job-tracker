@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       .from('contacts')
       .select('id, name, mutual_connections')
       .eq('user_id', defaultUserId)
-      .or(`linkedin.ilike.%${normalizedUrl}%,linkedin.ilike.%${username}%`)
+      .or(`linkedin_url.ilike.%${normalizedUrl}%,linkedin_url.ilike.%${username}%`)
       .limit(1)
       .single()
 
