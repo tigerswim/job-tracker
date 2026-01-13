@@ -46,7 +46,88 @@
     <!-- Loading State -->
     <div id="loadingState" class="loading-state">
       <div class="spinner"></div>
-      <p>Extracting job details...</p>
+      <p id="loadingText">Extracting job details...</p>
+    </div>
+
+    <!-- Profile Sync Section (for LinkedIn profiles) -->
+    <div id="profileSection" class="profile-section hidden">
+      <div class="profile-info">
+        <div class="profile-header">
+          <div class="profile-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div class="profile-details">
+            <h3 id="profileName">Loading...</h3>
+            <p id="profileHeadline" class="profile-headline"></p>
+          </div>
+        </div>
+
+        <div id="contactMatch" class="contact-match hidden">
+          <div class="match-badge match-found">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 6L9 17l-5-5"></path>
+            </svg>
+            <span>Contact found in Job Tracker</span>
+          </div>
+        </div>
+
+        <div id="contactNotFound" class="contact-match hidden">
+          <div class="match-badge match-not-found">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+            <span>Contact not in Job Tracker</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="connections-section">
+        <div class="connections-header">
+          <h4>Mutual Connections</h4>
+          <button id="loadAllBtn" class="btn-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+            </svg>
+            Load all from page
+          </button>
+        </div>
+
+        <div id="connectionsPreview" class="connections-preview">
+          <p class="no-connections">No mutual connections found on page</p>
+        </div>
+
+        <div id="connectionsSummary" class="connections-summary hidden">
+          <div class="summary-row">
+            <span class="summary-label">Found on LinkedIn:</span>
+            <span id="foundCount" class="summary-value">0</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Already saved:</span>
+            <span id="existingCount" class="summary-value">0</span>
+          </div>
+          <div class="summary-row summary-highlight">
+            <span class="summary-label">New to add:</span>
+            <span id="newCount" class="summary-value">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button type="button" id="syncConnectionsBtn" class="btn btn-primary" disabled>
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Sync Connections
+        </button>
+      </div>
     </div>
 
     <!-- Job Form -->
@@ -141,6 +222,35 @@
       <h2>Oops! Something went wrong</h2>
       <p id="errorMessage">Unable to add job. Please try again.</p>
       <button id="retryBtn" class="btn btn-primary">Try Again</button>
+    </div>
+  </div>
+
+  <!-- Settings Section -->
+  <div id="settingsSection" class="settings-section hidden">
+    <div class="settings-header">
+      <h3>Extension Settings</h3>
+      <button id="closeSettingsBtn" class="btn-close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="settings-content">
+      <div class="form-group">
+        <label for="apiKeyInput">API Key (for Connections Sync)</label>
+        <input type="password" id="apiKeyInput" placeholder="Enter your API key">
+        <p class="help-text">Required for syncing mutual connections. Get this from your .env.local file.</p>
+      </div>
+      <div class="button-group">
+        <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+      </div>
+      <div id="settingsSaved" class="settings-saved hidden">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 6L9 17l-5-5"></path>
+        </svg>
+        Settings saved!
+      </div>
     </div>
   </div>
 

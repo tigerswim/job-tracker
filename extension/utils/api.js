@@ -1,13 +1,25 @@
 // api.js - API communication utilities for Job Tracker extension
 
 const API_BASE_URL = 'https://job-tracker.kineticbrandpartners.com';
-const DEV_API_BASE_URL = 'http://localhost:3001';
 
-// Determine if we're in development mode
+// Get API key from storage (set by user in extension settings)
+async function getApiKey() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['extension_api_key'], (result) => {
+      resolve(result.extension_api_key || null);
+    });
+  });
+}
+
+// Set API key in storage
+export async function setApiKey(apiKey) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ extension_api_key: apiKey }, resolve);
+  });
+}
+
 function getApiBaseUrl() {
-  // Check if we have localhost in any open tabs (dev mode)
-  // For now, default to localhost for testing
-  return DEV_API_BASE_URL;
+  return API_BASE_URL;
 }
 
 /**
@@ -154,4 +166,98 @@ export function setupAuthListener() {
       return true; // Keep channel open for async response
     }
   });
+}
+
+/**
+ * Look up a contact by LinkedIn URL
+ * Uses API key authentication (no user login required)
+ * @param {string} linkedinUrl - The LinkedIn profile URL
+ * @returns {Promise<{found: boolean, contact?: object, error?: string}>}
+ */
+export async function lookupContact(linkedinUrl) {
+  try {
+    const apiKey = await getApiKey();
+
+    if (!apiKey) {
+      return {
+        found: false,
+        error: 'API key not configured. Please set your API key in extension settings.'
+      };
+    }
+
+    const response = await fetch(`${getApiBaseUrl()}/api/extension/lookup-contact`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey
+      },
+      body: JSON.stringify({ linkedin_url: linkedinUrl })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return {
+        found: false,
+        error: result.error || `API error: ${response.status}`
+      };
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error looking up contact:', error);
+    return {
+      found: false,
+      error: error.message || 'Failed to look up contact'
+    };
+  }
+}
+
+/**
+ * Sync mutual connections to a contact
+ * Uses API key authentication (no user login required)
+ * @param {string} linkedinUrl - The LinkedIn profile URL
+ * @param {string[]} mutualConnections - Array of mutual connection names
+ * @returns {Promise<{success: boolean, added?: string[], already_existed?: string[], error?: string}>}
+ */
+export async function syncConnections(linkedinUrl, mutualConnections) {
+  try {
+    const apiKey = await getApiKey();
+
+    if (!apiKey) {
+      return {
+        success: false,
+        error: 'API key not configured. Please set your API key in extension settings.'
+      };
+    }
+
+    const response = await fetch(`${getApiBaseUrl()}/api/extension/sync-connections`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey
+      },
+      body: JSON.stringify({
+        linkedin_url: linkedinUrl,
+        mutual_connections: mutualConnections
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || `API error: ${response.status}`
+      };
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error syncing connections:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to sync connections'
+    };
+  }
 }
