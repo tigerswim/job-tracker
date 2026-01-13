@@ -43,9 +43,9 @@ export async function POST(request: NextRequest) {
     // Look up contact by LinkedIn URL
     const { data: contact, error } = await supabase
       .from('contacts')
-      .select('id, name, title, company, linkedin, mutual_connections')
+      .select('id, name, job_title, company, linkedin_url, mutual_connections')
       .eq('user_id', defaultUserId)
-      .or(`linkedin.ilike.%${normalizedUrl}%,linkedin.ilike.%${extractUsername(linkedin_url)}%`)
+      .or(`linkedin_url.ilike.%${normalizedUrl}%,linkedin_url.ilike.%${extractUsername(linkedin_url)}%`)
       .limit(1)
       .single()
 
@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
       contact: {
         id: contact.id,
         name: contact.name,
-        title: contact.title,
+        title: contact.job_title,
         company: contact.company,
-        linkedin: contact.linkedin,
+        linkedin: contact.linkedin_url,
         mutual_connections: contact.mutual_connections || []
       }
     })
