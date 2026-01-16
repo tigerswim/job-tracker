@@ -36,18 +36,55 @@ export async function POST(request: NextRequest) {
 
     // Normalize LinkedIn URL for matching
     const normalizedUrl = normalizeLinkedInUrl(linkedin_url)
+    const username = extractUsername(linkedin_url)
+
+    console.log('[Lookup Contact] Input URL:', linkedin_url)
+    console.log('[Lookup Contact] Normalized URL:', normalizedUrl)
+    console.log('[Lookup Contact] Extracted username:', username)
+    console.log('[Lookup Contact] User ID:', defaultUserId)
 
     // Create Supabase client with service role key (bypasses RLS)
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Look up contact by LinkedIn URL
-    const { data: contact, error } = await supabase
+    // Look up contact by LinkedIn URL with multiple matching strategies
+    // Try exact username match first (most reliable)
+    let { data: contact, error } = await supabase
       .from('contacts')
       .select('id, name, job_title, company, linkedin_url, mutual_connections')
       .eq('user_id', defaultUserId)
-      .or(`linkedin_url.ilike.%${normalizedUrl}%,linkedin_url.ilike.%${extractUsername(linkedin_url)}%`)
+      .ilike('linkedin_url', `%${username}%`)
       .limit(1)
       .single()
+
+    // If not found, try normalized path match
+    if (!contact && (!error || error.code === 'PGRST116')) {
+      const result = await supabase
+        .from('contacts')
+        .select('id, name, job_title, company, linkedin_url, mutual_connections')
+        .eq('user_id', defaultUserId)
+        .ilike('linkedin_url', `%${normalizedUrl}%`)
+        .limit(1)
+        .single()
+
+      contact = result.data
+      error = result.error
+    }
+
+    // If still not found, try just the username without in/ prefix
+    if (!contact && (!error || error.code === 'PGRST116')) {
+      const result = await supabase
+        .from('contacts')
+        .select('id, name, job_title, company, linkedin_url, mutual_connections')
+        .eq('user_id', defaultUserId)
+        .or(`linkedin_url.ilike.%${username},linkedin_url.eq.${username}`)
+        .limit(1)
+        .single()
+
+      contact = result.data
+      error = result.error
+    }
+
+    console.log('[Lookup Contact] Query result:', { found: !!contact, error: error?.code })
 
     if (error && error.code !== 'PGRST116') {
       // PGRST116 = no rows returned (not an error for us)
