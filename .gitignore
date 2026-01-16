@@ -28,6 +28,9 @@ Test Data/
 n8n-automation/
 n8n-news-workflow/
 
+# Browser extension (local development only)
+extension/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
