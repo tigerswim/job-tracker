@@ -103,6 +103,20 @@ export default function JobForm({ job: editingJob, onJobAdded, onCancel }: JobFo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper function to decode HTML entities
+  const decodeHTMLEntities = (text: string) => {
+    const textarea = document.createElement('textarea')
+    textarea.innerHTML = text
+    return textarea.value
+  }
+
+  // Helper function to check if content contains HTML (including encoded HTML)
+  const containsHTML = (text: string | null | undefined) => {
+    if (!text) return false
+    // Check for HTML tags anywhere in the text, not just at the start
+    return /<[a-zA-Z][^>]*>/.test(text) || /&lt;[a-zA-Z][^&]*&gt;/.test(text)
+  }
+
   // Reset form when editing job changes
   useEffect(() => {
     if (editingJob) {
@@ -390,15 +404,38 @@ export default function JobForm({ job: editingJob, onJobAdded, onCancel }: JobFo
                 <ClipboardList className="w-4 h-4 text-slate-500" />
                 <span>Job Description</span>
               </label>
+
+              {/* Show formatted preview if HTML content exists */}
+              {form.job_description && containsHTML(form.job_description) && (
+                <div className="mb-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="text-sm font-medium text-slate-600 mb-2">Preview:</div>
+                  <div
+                    className="prose prose-sm max-w-none text-slate-800
+                      [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-3 [&>h1]:text-slate-900
+                      [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h2]:text-slate-800
+                      [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-2 [&>h3]:text-slate-700
+                      [&>p]:mb-2 [&>p]:leading-relaxed
+                      [&>ul]:list-disc [&>ul]:ml-5 [&>ul]:mb-2 [&>ul]:space-y-1
+                      [&>ol]:list-decimal [&>ol]:ml-5 [&>ol]:mb-2 [&>ol]:space-y-1
+                      [&>li]:mb-1 [&>li]:leading-relaxed
+                      [&>strong]:font-bold [&>strong]:text-slate-900
+                      [&>em]:italic
+                      [&>b]:font-bold [&>b]:text-slate-900
+                      [&>i]:italic"
+                    dangerouslySetInnerHTML={{ __html: decodeHTMLEntities(form.job_description) }}
+                  />
+                </div>
+              )}
+
               <textarea
                 value={form.job_description}
                 onChange={handleChange('job_description')}
-                className="input min-h-[120px] resize-y"
+                className="input min-h-[120px] resize-y font-mono text-sm"
                 placeholder="Paste the job description, key requirements, or responsibilities..."
                 rows={5}
               />
               <p className="form-help">
-                Include the full job posting, requirements, or key details from the listing
+                HTML formatting is preserved (bold, italics, bullet points, etc.)
               </p>
             </div>
 

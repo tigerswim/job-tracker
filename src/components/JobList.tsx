@@ -378,11 +378,11 @@ const SortableHeader = memo(({
 SortableHeader.displayName = 'SortableHeader'
 
 // Memoized Job Table Row - Compact version with optimized callbacks
-const JobTableRow = memo(({ 
-  job, 
-  onEdit, 
-  onDelete, 
-  onManageContacts, 
+const JobTableRow = memo(({
+  job,
+  onEdit,
+  onDelete,
+  onManageContacts,
   onContactClick,
   onCreateReminder
 }: {
@@ -393,6 +393,8 @@ const JobTableRow = memo(({
   onContactClick: (contact: Contact) => void
   onCreateReminder: (job: Job) => void
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+
   // Memoize callbacks to prevent child re-renders
   const handleEdit = useCallback(() => {
     onEdit(job)
@@ -410,66 +412,178 @@ const JobTableRow = memo(({
     onCreateReminder(job)
   }, [job, onCreateReminder])
 
+  const toggleExpand = useCallback(() => {
+    setIsExpanded(prev => !prev)
+  }, [])
+
+  const hasDetails = Boolean(job.job_description || job.job_url || job.notes)
+
+  // Helper function to check if content contains HTML (including encoded HTML)
+  const containsHTML = (text: string | null | undefined) => {
+    if (!text) return false
+    // Check for HTML tags anywhere in the text, not just at the start
+    return /<[a-zA-Z][^>]*>/.test(text) || /&lt;[a-zA-Z][^&]*&gt;/.test(text)
+  }
+
+  // Helper function to decode HTML entities
+  const decodeHTMLEntities = (text: string) => {
+    const textarea = document.createElement('textarea')
+    textarea.innerHTML = text
+    return textarea.value
+  }
+
   return (
-    <tr className="hover:bg-slate-50/50 group relative transition-all duration-200">
-      <td className="px-4 py-3 text-sm font-medium text-gray-900 relative">
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-r" />
-        {job.job_title}
-      </td>
-      <td className="px-4 py-3 text-sm text-gray-600">
-        {job.company}
-      </td>
-      <td className="px-4 py-3 hidden sm:table-cell">
-        <span className={`status-badge status-${job.status?.toLowerCase()?.replace(/\s+/g, '-')}`}>
-          {job.status?.replace('_', ' ')}
-        </span>
-      </td>
-      <td className="px-4 py-3 text-sm text-gray-500 hidden md:table-cell">
-        {job.location || '—'}
-      </td>
-      <td className="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell">
-        {job.salary || '—'}
-      </td>
-      <td className="px-4 py-3 hidden xl:table-cell">
-        <JobContactLinks 
-          jobId={job.id}
-          contacts={job.contacts || []}
-          onContactClick={onContactClick}
-        />
-      </td>
-      <td className="px-4 py-3 text-right w-40 sticky right-0 bg-white">
-        <div className="flex items-center justify-end space-x-1">
-          <button
-            onClick={handleCreateReminder}
-            className="p-1 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded"
-            title="Create reminder"
-          >
-            <Bell className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleManageContacts}
-            className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
-            title="Manage contacts"
-          >
-            <Users className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleEdit}
-            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
-            title="Edit job"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleDelete}
-            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
-            title="Delete job"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </td>
-    </tr>
+    <>
+      <tr className="hover:bg-slate-50/50 group relative transition-all duration-200">
+        <td className="px-4 py-3 text-sm font-medium text-gray-900 relative">
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-r" />
+          <div className="flex items-center space-x-2">
+            {hasDetails && (
+              <button
+                onClick={toggleExpand}
+                className="p-0.5 text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0"
+                title={isExpanded ? "Hide details" : "Show details"}
+              >
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+              </button>
+            )}
+            <span>{job.job_title}</span>
+          </div>
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-600">
+          {job.company}
+        </td>
+        <td className="px-4 py-3 hidden sm:table-cell">
+          <span className={`status-badge status-${job.status?.toLowerCase()?.replace(/\s+/g, '-')}`}>
+            {job.status?.replace('_', ' ')}
+          </span>
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-500 hidden md:table-cell">
+          {job.location || '—'}
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell">
+          {job.salary || '—'}
+        </td>
+        <td className="px-4 py-3 hidden xl:table-cell">
+          <JobContactLinks
+            jobId={job.id}
+            contacts={job.contacts || []}
+            onContactClick={onContactClick}
+          />
+        </td>
+        <td className="px-4 py-3 text-right w-40 sticky right-0 bg-white group-hover:bg-slate-50/50">
+          <div className="flex items-center justify-end space-x-1">
+            <button
+              onClick={handleCreateReminder}
+              className="p-1 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded"
+              title="Create reminder"
+            >
+              <Bell className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleManageContacts}
+              className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
+              title="Manage contacts"
+            >
+              <Users className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleEdit}
+              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+              title="Edit job"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleDelete}
+              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+              title="Delete job"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </td>
+      </tr>
+      {isExpanded && hasDetails && (
+        <tr className="bg-slate-50">
+          <td colSpan={7} className="px-4 py-4 border-t border-slate-200">
+            <div className="space-y-4 max-w-5xl">
+              {/* Job URL */}
+              {job.job_url && (
+                <div>
+                  <div className="flex items-center space-x-2 text-slate-600 font-medium mb-2 text-sm">
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Job Posting</span>
+                  </div>
+                  <a
+                    href={job.job_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 hover:underline text-sm flex items-center space-x-1"
+                  >
+                    <span>{job.job_url}</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+
+              {/* Job Description */}
+              {job.job_description && (
+                <div>
+                  <div className="flex items-center space-x-2 text-slate-600 font-medium mb-2 text-sm">
+                    <FileText className="w-4 h-4" />
+                    <span>Job Description</span>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-slate-200">
+                    {containsHTML(job.job_description) ? (
+                      <div
+                        className="prose prose-sm max-w-none text-slate-800
+                          [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-3 [&>h1]:text-slate-900
+                          [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h2]:text-slate-800 [&>h2]:mt-4
+                          [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-2 [&>h3]:text-slate-700 [&>h3]:mt-3
+                          [&>p]:mb-3 [&>p]:leading-relaxed [&>p]:text-slate-700
+                          [&>ul]:list-disc [&>ul]:ml-5 [&>ul]:mb-3 [&>ul]:space-y-1.5
+                          [&>ol]:list-decimal [&>ol]:ml-5 [&>ol]:mb-3 [&>ol]:space-y-1.5
+                          [&>li]:mb-1 [&>li]:leading-relaxed [&>li]:text-slate-700
+                          [&>strong]:font-bold [&>strong]:text-slate-900
+                          [&>em]:italic [&>em]:text-slate-700
+                          [&>b]:font-bold [&>b]:text-slate-900
+                          [&>i]:italic [&>i]:text-slate-700
+                          [&>div]:mb-2"
+                        dangerouslySetInnerHTML={{ __html: decodeHTMLEntities(job.job_description) }}
+                      />
+                    ) : (
+                      <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+                        {job.job_description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {job.notes && (
+                <div>
+                  <div className="flex items-center space-x-2 text-slate-600 font-medium mb-2 text-sm">
+                    <FileText className="w-4 h-4" />
+                    <span>Personal Notes</span>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-slate-200">
+                    <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+                      {job.notes}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   )
 })
 
