@@ -186,6 +186,12 @@ The following optimizations have been implemented to reduce CPU and memory usage
 - **Disabled incremental compilation**: Prevents TypeScript memory accumulation during development
 - **Next.js 15.5.6**: Latest version with memory leak fixes and performance improvements
 
+### Performance Optimizations (2026-02)
+Additional runtime and load-time improvements:
+- **Image optimization re-enabled**: Removed `images: { unoptimized: true }` from `next.config.ts` — Next.js now serves WebP/AVIF, generates responsive sizes, and lazy-loads images automatically
+- **Supabase client moved to module scope** (`src/app/page.tsx`): `createClientComponentClient()` is no longer called inside the component body on every render, eliminating redundant client re-creation
+- **Server-side contact search** (`src/components/ContactList.tsx`): Search now delegates to `searchContacts()` (Supabase query with `ilike`) instead of filtering all contacts in JavaScript; debounced search term triggers a fresh server fetch, replacing a 50-line O(n×m) client-side filter across nested arrays
+
 **Expected dev server performance:**
 - CPU: 10-20% idle, 30-40% during file edits
 - Memory: 400-600 MB (previously 1.09 GB)
