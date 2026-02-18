@@ -768,10 +768,6 @@ export default function ContactList() {
   // Debounced search term for performance
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY)
 
-  useEffect(() => {
-    loadContacts(debouncedSearchTerm)
-  }, [debouncedSearchTerm])
-
   const loadContacts = useCallback(async (term = '') => {
     setLoading(true)
     try {
@@ -805,6 +801,10 @@ export default function ContactList() {
       setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    loadContacts(debouncedSearchTerm)
+  }, [debouncedSearchTerm])
 
   const handleDelete = useCallback(async (id: string) => {
     if (confirm('Are you sure you want to delete this contact?')) {
