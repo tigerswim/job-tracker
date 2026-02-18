@@ -769,7 +769,7 @@ export default function ContactList() {
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY)
 
   const loadContacts = useCallback(async (term = '') => {
-    setLoading(true)
+    if (!term.trim()) setLoading(true)
     try {
       let data: Contact[]
 

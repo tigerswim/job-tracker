@@ -101,14 +101,7 @@ export async function searchContacts(options: ContactSearchOptions = {}): Promis
 
     if (searchTerm.trim()) {
       const term = searchTerm.trim()
-      query = query.or(`
-        name.ilike.%${term}%,
-        company.ilike.%${term}%,
-        job_title.ilike.%${term}%,
-        email.ilike.%${term}%,
-        current_location.ilike.%${term}%,
-        notes.ilike.%${term}%
-      `)
+      query = query.or(`name.ilike.%${term}%,company.ilike.%${term}%,job_title.ilike.%${term}%,email.ilike.%${term}%,current_location.ilike.%${term}%,notes.ilike.%${term}%`)
     }
 
     query = query.order(sortBy, { ascending: sortOrder === 'asc' })
