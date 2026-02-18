@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react'
 import { Contact } from '@/lib/supabase'
-import { getContactsLite, getContactById, deleteContact } from '@/lib/contacts'
+import { getContactsLite, getContactById, deleteContact, searchContacts } from '@/lib/contacts'
 import { getJobsForContacts } from '@/lib/jobContacts'
 import {
   Plus,
@@ -769,34 +769,36 @@ export default function ContactList() {
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY)
 
   useEffect(() => {
-    loadContacts()
-  }, [])
+    loadContacts(debouncedSearchTerm)
+  }, [debouncedSearchTerm])
 
-  const loadContacts = useCallback(async () => {
+  const loadContacts = useCallback(async (term = '') => {
     setLoading(true)
     try {
-      // Step 1: Load contacts FAST - show them immediately
-      console.time('contacts-load-only')
-      const data = await getContactsLite()
-      setContacts(data as unknown as Contact[])
-      console.timeEnd('contacts-load-only')
-      
-      // Show contacts immediately to user
+      let data: Contact[]
+
+      if (term.trim()) {
+        // Server-side search — no need to scan all contacts in JS
+        const result = await searchContacts({ searchTerm: term, limit: 200 })
+        data = result.contacts as unknown as Contact[]
+      } else {
+        data = await getContactsLite() as unknown as Contact[]
+      }
+
+      setContacts(data)
       setLoading(false)
-      
-      // Step 2: Load jobs in background (non-blocking UI)
+
+      // Load job counts in background (non-blocking UI)
       if (data.length > 0) {
         setTimeout(async () => {
-          console.time('jobs-background-load')
           try {
-            const map = await getJobsForContacts((data as any).map((c: any) => c.id))
+            const map = await getJobsForContacts(data.map((c) => c.id))
             setContactIdToJobs(map)
-            console.timeEnd('jobs-background-load')
           } catch (e) {
             console.error('Error fetching jobs for contacts:', e)
             setContactIdToJobs({})
           }
-        }, 50) // Small delay to let contacts render first
+        }, 50)
       }
     } catch (error) {
       console.error('Error loading contacts:', error)
@@ -808,19 +810,19 @@ export default function ContactList() {
     if (confirm('Are you sure you want to delete this contact?')) {
       const success = await deleteContact(id)
       if (success) {
-        loadContacts()
+        loadContacts(debouncedSearchTerm)
         if (selectedContactId === id) {
           setSelectedContactId(null)
         }
       }
     }
-  }, [selectedContactId, loadContacts])
+  }, [selectedContactId, loadContacts, debouncedSearchTerm])
 
   const handleFormSuccess = useCallback(() => {
     setShowForm(false)
     setEditingContact(null)
-    loadContacts()
-  }, [loadContacts])
+    loadContacts(debouncedSearchTerm)
+  }, [loadContacts, debouncedSearchTerm])
 
   const handleEditContact = useCallback(async (contact: Contact) => {
     // Load full contact data for editing
@@ -916,60 +918,8 @@ export default function ContactList() {
     }
   }, [contactNameMap, handleEditContact])
 
-  // Enhanced filter contacts based on debounced search term (memoized)
-  const filteredContacts = useMemo(() => {
-    if (!debouncedSearchTerm.trim()) {
-      return contacts
-    }
-
-    const term = debouncedSearchTerm.toLowerCase()
-    const filtered = contacts.filter(contact => {
-      // Basic fields - add null checks before toLowerCase()
-      const basicMatch = (contact.name || '').toLowerCase().includes(term) ||
-        (contact.company || '').toLowerCase().includes(term) ||
-        (contact.email || '').toLowerCase().includes(term) ||
-        (contact.job_title || '').toLowerCase().includes(term) ||
-        (contact.notes || '').toLowerCase().includes(term)
-
-      // Experience search - add null checks for company and title
-      const experienceMatch = Array.isArray(contact.experience) && contact.experience.some(exp =>
-        (exp.company || '').toLowerCase().includes(term) ||
-        (exp.title || '').toLowerCase().includes(term) ||
-        (exp.description && exp.description.toLowerCase().includes(term))
-      )
-
-      // Education search - add null checks for institution and degree_and_field
-      const educationMatch = Array.isArray(contact.education) && contact.education.some(edu =>
-        (edu.institution || '').toLowerCase().includes(term) ||
-        (edu.degree_and_field || '').toLowerCase().includes(term) ||
-        (edu.notes && edu.notes.toLowerCase().includes(term))
-      )
-
-      // Mutual connections search - ensure it's an array before calling .some()
-      const connectionMatch = Array.isArray(contact.mutual_connections) && contact.mutual_connections.some(conn =>
-        (conn || '').toLowerCase().includes(term)
-      )
-
-      return basicMatch || experienceMatch || educationMatch || connectionMatch
-    })
-
-    // Sort results by name to prioritize direct name matches
-    return filtered.sort((a, b) => {
-      const nameA = (a.name || '').toLowerCase()
-      const nameB = (b.name || '').toLowerCase()
-
-      // Check if either name contains the search term
-      const aNameMatch = nameA.includes(term)
-      const bNameMatch = nameB.includes(term)
-
-      // Prioritize contacts whose name contains the search term
-      if (aNameMatch && !bNameMatch) return -1
-      if (!aNameMatch && bNameMatch) return 1
-
-      // If both match or both don't match, sort alphabetically by name
-      return nameA.localeCompare(nameB)
-    })
-  }, [contacts, debouncedSearchTerm])
+  // Server-side search handles filtering; contacts state already contains correct results
+  const filteredContacts = contacts
 
   // Paginated contacts for better performance with large lists
   const displayedContacts = useMemo(() => {

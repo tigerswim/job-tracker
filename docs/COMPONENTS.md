@@ -308,11 +308,17 @@ Form for creating and editing interactions.
 - useCallback for event handlers
 - useMemo for computed values
 - Lazy loading for non-critical components
+- Supabase client instantiated at module scope (not inside components) to prevent re-creation on every render
+
+### Search Optimization
+- Contact search delegates to server-side Supabase query (`searchContacts()`) instead of filtering all contacts in JavaScript
+- Debounced search term (300ms) triggers a fresh server query, replacing the previous client-side O(n×m) filter across nested arrays
+- No-search state continues to use `getContactsLite()` for fast initial load
 
 ### Bundle Optimization
 - Tree shaking for unused code
 - Code splitting by route
-- Image optimization with Next.js Image component
+- Image optimization with Next.js Image component (WebP/AVIF, responsive sizes, lazy loading — `unoptimized` flag removed)
 - CSS purging in production
 
 ## Browser Support

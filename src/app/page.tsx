@@ -22,14 +22,12 @@ import { DM_Sans, Archivo } from 'next/font/google'
 
 const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '700'] })
 const archivo = Archivo({ subsets: ['latin'], weight: ['600', '700', '800'] })
+const supabase = createClientComponentClient()
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'jobs' | 'contacts' | 'reporting' | 'csv'>('jobs')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-
-  // Initialize Supabase client using createClientComponentClient
-  const supabase = createClientComponentClient()
 
   // Fixed useEffect with proper async handling
   useEffect(() => {
@@ -76,7 +74,7 @@ export default function Home() {
         cleanup()
       }
     }
-  }, [supabase])
+  }, [])
 
   const handleSignOut = async () => {
     try {
