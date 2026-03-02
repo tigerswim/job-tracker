@@ -68,28 +68,28 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Helper function to add https:// prefix to LinkedIn URLs if not present
+    // Helper function to normalize LinkedIn URLs: add https://, strip trailing slash
     const formatLinkedInUrl = (url: string | null | undefined): string | null => {
       if (!url) return null
-      const trimmedUrl = url.trim()
-      if (!trimmedUrl) return null
-      // Check if URL already has a protocol
-      if (!/^https?:\/\//i.test(trimmedUrl)) {
-        return `https://${trimmedUrl}`
+      let normalized = url.trim()
+      if (!normalized) return null
+      if (!/^https?:\/\//i.test(normalized)) {
+        normalized = `https://${normalized}`
       }
-      return trimmedUrl
+      return normalized.replace(/\/+$/, '')
     }
 
     // Format the incoming LinkedIn URL
     const formattedLinkedInUrl = formatLinkedInUrl(body.linkedin)
 
     // Check for existing contact by LinkedIn URL (primary matching method)
+    // Match against both trailing-slash and non-trailing-slash variants
     let existingContact = null
     if (formattedLinkedInUrl) {
       const { data: linkedInMatch } = await supabase
         .from('contacts')
         .select('*')
-        .eq('linkedin_url', formattedLinkedInUrl)
+        .or(`linkedin_url.eq.${formattedLinkedInUrl},linkedin_url.eq.${formattedLinkedInUrl}/`)
         .limit(1)
 
       if (linkedInMatch && linkedInMatch.length > 0) {
