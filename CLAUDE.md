@@ -8,7 +8,7 @@ job-tracker is a **standalone repository** for a job application and contact man
 
 - **Repository**: `https://github.com/tigerswim/job-tracker.git`
 - **Deployment**: Netlify (https://job-tracker.kineticbrandpartners.com)
-- **Tech Stack**: Next.js 15.5.6, React 19, TypeScript, Tailwind CSS 4, Supabase
+- **Tech Stack**: Next.js 15.5.7, React 19, TypeScript, Tailwind CSS 4, Supabase
 
 ## Development Commands
 
@@ -191,6 +191,9 @@ Additional runtime and load-time improvements:
 - **Image optimization re-enabled**: Removed `images: { unoptimized: true }` from `next.config.ts` — Next.js now serves WebP/AVIF, generates responsive sizes, and lazy-loads images automatically
 - **Supabase client moved to module scope** (`src/app/page.tsx`): `createClientComponentClient()` is no longer called inside the component body on every render, eliminating redundant client re-creation
 - **Server-side contact search** (`src/components/ContactList.tsx`): Search now delegates to `searchContacts()` (Supabase query with `ilike`) instead of filtering all contacts in JavaScript; debounced search term triggers a fresh server fetch, replacing a 50-line O(n×m) client-side filter across nested arrays
+
+### Bug Fixes (2026-03)
+- **Mutual connection link/suggest fix** (`src/components/ContactList.tsx`): Added separate `allContacts` state holding the full unfiltered contact list. Previously `contactNameMap` and the `allContacts` prop to `ContactForm` were built from the search-filtered `contacts` state — when searching for a specific contact, only that contact was in the list, so mutual connection names couldn't be resolved (no blue clickable links) and the auto-suggest dropdown showed no results. Now both use the full list, which is populated on initial load and refreshed after saves/deletes.
 
 **Expected dev server performance:**
 - CPU: 10-20% idle, 30-40% during file edits

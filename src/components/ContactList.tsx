@@ -700,6 +700,7 @@ const useDebounce = (value: string, delay: number) => {
 
 export default function ContactList() {
   const [contacts, setContacts] = useState<Contact[]>([])
+  const [allContacts, setAllContacts] = useState<Contact[]>([]) // Full unfiltered list for name lookup and suggestions
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
@@ -779,6 +780,8 @@ export default function ContactList() {
         data = result.contacts as unknown as Contact[]
       } else {
         data = await getContactsLite() as unknown as Contact[]
+        // Keep full list in sync for name lookups and suggestions
+        setAllContacts(data)
       }
 
       setContacts(data)
@@ -898,16 +901,17 @@ export default function ContactList() {
   }, [])
 
   // Create a map for quick contact lookup by name (memoized)
+  // Use allContacts (full list) so mutual connection links work even when search is active
   const contactNameMap = useMemo(() => {
     const map = new Map<string, Contact>()
-    contacts.forEach(contact => {
+    allContacts.forEach(contact => {
       const safeName = (contact.name || '').toLowerCase().trim()
       if (safeName) {
         map.set(safeName, contact)
       }
     })
     return map
-  }, [contacts])
+  }, [allContacts])
 
   // Handle clicking on mutual connection
   const handleMutualConnectionClick = useCallback(async (connectionName: string) => {
@@ -1232,7 +1236,7 @@ export default function ContactList() {
             setShowForm(false)
             setEditingContact(null)
           }}
-          allContacts={contacts}
+          allContacts={allContacts}
         />
       )}
 
