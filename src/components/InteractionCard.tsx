@@ -75,17 +75,18 @@ const INTERACTION_TYPE_CONFIG = {
   }
 } as const
 
-// Enhanced date formatting with caching
+// Date formatting — keyed by [todayString, dateString] so cache never serves stale relative labels
 const dateFormatCache = new Map<string, string>()
 
 const formatDate = (dateString: string): string => {
-  if (dateFormatCache.has(dateString)) {
-    return dateFormatCache.get(dateString)!
+  const today = new Date()
+  const cacheKey = `${today.toDateString()}|${dateString}`
+  if (dateFormatCache.has(cacheKey)) {
+    return dateFormatCache.get(cacheKey)!
   }
 
   const [year, month, day] = dateString.split('-').map(Number)
   const date = new Date(year, month - 1, day)
-  const today = new Date()
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
 
@@ -97,7 +98,7 @@ const formatDate = (dateString: string): string => {
   } else {
     const diffTime = today.getTime() - date.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    
+
     if (diffDays <= 7) {
       formatted = date.toLocaleDateString('en-US', { weekday: 'long' })
     } else if (date.getFullYear() === today.getFullYear()) {
@@ -107,7 +108,7 @@ const formatDate = (dateString: string): string => {
     }
   }
 
-  dateFormatCache.set(dateString, formatted)
+  dateFormatCache.set(cacheKey, formatted)
   return formatted
 }
 
