@@ -109,6 +109,17 @@ All API routes follow consistent patterns:
 - **Cost**: ~$0.02-0.03 per resume (Claude API for data extraction)
 - **Workflow**: PDF → pdfjs-dist extraction → Claude API → POST to endpoint → Move to processed folder
 
+### n8n Docker Image Notes
+- Pull from `docker.n8n.io/n8nio/n8n` (current registry) — `n8nio/n8n` on Docker Hub may lag months behind
+- Latest n8n image is **distroless** (no shell, no package manager) — installing tools requires multi-stage Docker build; see `n8n-automation/Dockerfile` for pattern
+- When rebuilding custom image after base image update: `docker compose build --pull --no-cache`
+
+### n8n 2.x Breaking Changes (upgraded March 2026)
+- **`executeCommand` node removed** — replaced with Code node using Node.js child_process execSync
+- **Code node requires env var** to use built-in modules: `NODE_FUNCTION_ALLOW_BUILTIN=child_process` in docker-compose
+- **File access restricted by default** — set `N8N_RESTRICT_FILE_ACCESS_TO=/home/node/.n8n-files;/data/resumes` (semicolon-separated) in docker-compose
+- **Node name references in Code nodes** — after replacing old `Execute Command` nodes, update any references to `$('Execute Command')` to match the new node names
+
 ### Component Architecture
 - Client components use `'use client'` directive
 - Supabase client created via `createClientComponentClient()`
@@ -194,6 +205,39 @@ Additional runtime and load-time improvements:
 
 ### Bug Fixes (2026-03)
 - **Mutual connection link/suggest fix** (`src/components/ContactList.tsx`): Added separate `allContacts` state holding the full unfiltered contact list. Previously `contactNameMap` and the `allContacts` prop to `ContactForm` were built from the search-filtered `contacts` state — when searching for a specific contact, only that contact was in the list, so mutual connection names couldn't be resolved (no blue clickable links) and the auto-suggest dropdown showed no results. Now both use the full list, which is populated on initial load and refreshed after saves/deletes.
+
+### Chrome Extension — LinkedIn DOM Changes (2026-03)
+LinkedIn migrated to **fully obfuscated CSS class names** (e.g. `_486a7ca9`). All prior selector-based scraping broke. Files affected: `extension/content/profile.js`.
+
+#### How to diagnose when LinkedIn breaks the extension again
+Open DevTools Console on the LinkedIn page and run:
+```javascript
+// Find the element containing the person's name
+document.querySelectorAll('*').forEach(function(el) {
+  if (el.children.length === 0 && el.textContent.trim() === 'THEIR NAME HERE') {
+    console.log(el.tagName, el.className.substring(0,80));
+  }
+});
+```
+Then check the parent chain for any stable `data-*` attributes or IDs to target.
+
+#### Profile name (`getProfileName`)
+- LinkedIn dropped `h1` entirely — name now lives in an `h2` (or sometimes `p`) with hashed classes.
+- **Fix**: Removed all class-based selectors. Instead, scan all `h1` then `h2` elements and match against a name regex: `^[A-Z][a-zA-ZÀ-ÖØ-öø-ÿ'\-]+(?: [A-Z][a-zA-ZÀ-ÖØ-öø-ÿ'\-]+){1,3}$` (2–4 capitalized words, under 60 chars).
+- If this breaks again, run the DevTools snippet above to find what tag/attributes the name now uses.
+
+#### Search results / mutual connections (`extractMutualConnections`)
+- LinkedIn dropped all stable `li`/class selectors for search result cards.
+- **Fix (Strategy 0)**: Select all `a[href*="/in/"]` links whose **direct parent is a `DIV`** — these are always the card-subject name links. Links with `P` parents are duplicates or mutual-connection previews inside other cards.
+- Name is embedded in the link's full text as `"Name • 1stHeadline..."` — split on ` • ` (unicode bullet U+2022) and take the first part.
+- If this breaks again, run in DevTools:
+  ```javascript
+  document.querySelectorAll('a[href*="/in/"]').forEach(function(a, i) {
+    if (i > 10) return;
+    console.log('a[' + i + '] parent=' + a.parentElement.tagName + ' text="' + a.textContent.trim().substring(0,60) + '"');
+  });
+  ```
+  Then identify which parent tag reliably marks the card-subject link vs. duplicates/previews.
 
 **Expected dev server performance:**
 - CPU: 10-20% idle, 30-40% during file edits
