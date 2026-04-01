@@ -398,7 +398,26 @@ export async function searchInteractions(searchTerm: string): Promise<Interactio
 
   try {
     const supabase = createClientComponentClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
     const term = searchTerm.trim()
+
+    interface SearchRow {
+      id: string
+      contact_id: string
+      type: string
+      date: string
+      summary: string
+      notes: string | null
+      user_id: string
+      created_at: string
+      updated_at: string
+      contacts: {
+        name: string
+        company: string | null
+      }
+    }
 
     const { data, error } = await supabase
       .from('interactions')
@@ -406,6 +425,7 @@ export async function searchInteractions(searchTerm: string): Promise<Interactio
         id, contact_id, type, date, summary, notes, user_id, created_at, updated_at,
         contacts!inner(name, company)
       `)
+      .eq('user_id', user.id)
       .or(`summary.ilike.%${term}%,notes.ilike.%${term}%,contacts.name.ilike.%${term}%,contacts.company.ilike.%${term}%`)
       .order('date', { ascending: false })
       .limit(50)
@@ -415,7 +435,7 @@ export async function searchInteractions(searchTerm: string): Promise<Interactio
       return []
     }
 
-    return (data || []).map((row: any) => ({
+    return (data || []).map((row: SearchRow) => ({
       id: row.id,
       contact_id: row.contact_id,
       type: row.type,
@@ -425,11 +445,11 @@ export async function searchInteractions(searchTerm: string): Promise<Interactio
       user_id: row.user_id,
       created_at: row.created_at,
       updated_at: row.updated_at,
-      contact_name: row.contacts[0]?.name || '',
-      contact_company: row.contacts[0]?.company ?? null,
+      contact_name: row.contacts?.name || '',
+      contact_company: row.contacts?.company ?? null,
     }))
-  } catch (err) {
-    console.error('Exception in searchInteractions:', err)
+  } catch (error) {
+    console.error('Exception in searchInteractions:', error)
     return []
   }
 }
