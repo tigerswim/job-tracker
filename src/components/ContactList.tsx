@@ -1241,11 +1241,12 @@ export default function ContactList() {
                     <InteractionSearchResultCard
                       key={result.id}
                       result={result}
-                      onOpenContact={(contactId) => {
-                        setSearchMode('contacts')
-                        setSearchTerm('')
-                        setInteractionResults([])
-                        loadContacts('').then(() => setSelectedContactId(contactId))
+                      onOpenContact={async (contactId) => {
+                        const fullContact = await getContactById(contactId)
+                        if (fullContact) {
+                          setEditingContact(fullContact)
+                          setShowForm(true)
+                        }
                       }}
                     />
                   ))}
