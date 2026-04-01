@@ -1245,7 +1245,7 @@ export default function ContactList() {
                         setSearchMode('contacts')
                         setSearchTerm('')
                         setInteractionResults([])
-                        setSelectedContactId(contactId)
+                        loadContacts('').then(() => setSelectedContactId(contactId))
                       }}
                     />
                   ))}
