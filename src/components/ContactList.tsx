@@ -821,17 +821,13 @@ export default function ContactList() {
       setInteractionResults([])
       return
     }
+    let cancelled = false
     setInteractionSearchLoading(true)
     searchInteractions(debouncedSearchTerm)
-      .then(results => {
-        setInteractionResults(results)
-      })
-      .catch(() => {
-        setInteractionResults([])
-      })
-      .finally(() => {
-        setInteractionSearchLoading(false)
-      })
+      .then(results => { if (!cancelled) setInteractionResults(results) })
+      .catch(() => { if (!cancelled) setInteractionResults([]) })
+      .finally(() => { if (!cancelled) setInteractionSearchLoading(false) })
+    return () => { cancelled = true }
   }, [debouncedSearchTerm, searchMode])
 
   const handleDelete = useCallback(async (id: string) => {
