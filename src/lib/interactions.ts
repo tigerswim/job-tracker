@@ -426,7 +426,8 @@ export async function searchInteractions(searchTerm: string): Promise<Interactio
         contacts!inner(name, company)
       `)
       .eq('user_id', user.id)
-      .or(`summary.ilike.%${term}%,notes.ilike.%${term}%,contacts.name.ilike.%${term}%,contacts.company.ilike.%${term}%`)
+      .or(`summary.ilike.%${term}%,notes.ilike.%${term}%`)
+      .or(`name.ilike.%${term}%,company.ilike.%${term}%`, { referencedTable: 'contacts' })
       .order('date', { ascending: false })
       .limit(50)
 
@@ -441,7 +442,7 @@ export async function searchInteractions(searchTerm: string): Promise<Interactio
       type: row.type,
       date: row.date,
       summary: row.summary,
-      notes: row.notes,
+      notes: row.notes ?? undefined,
       user_id: row.user_id,
       created_at: row.created_at,
       updated_at: row.updated_at,
