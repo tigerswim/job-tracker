@@ -822,10 +822,16 @@ export default function ContactList() {
       return
     }
     setInteractionSearchLoading(true)
-    searchInteractions(debouncedSearchTerm).then(results => {
-      setInteractionResults(results)
-      setInteractionSearchLoading(false)
-    })
+    searchInteractions(debouncedSearchTerm)
+      .then(results => {
+        setInteractionResults(results)
+      })
+      .catch(() => {
+        setInteractionResults([])
+      })
+      .finally(() => {
+        setInteractionSearchLoading(false)
+      })
   }, [debouncedSearchTerm, searchMode])
 
   const handleDelete = useCallback(async (id: string) => {
