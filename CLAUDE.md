@@ -144,6 +144,11 @@ Modal components implementing this pattern:
 - `ContactModal` (in ContactList.tsx) - Contact quick view
 - `JobContactManager.tsx` - Job-contact relationship management
 
+### Opening a Contact Detail Modal Programmatically
+- Use `getContactById(id)` → `setEditingContact()` → `setShowForm(true)` — do NOT try to select a contact in the grid
+- `displayedContactsCount` starts at 20 (paginated); contacts beyond the first page won't be highlighted/visible if selected via `setSelectedContactId`
+- On mobile, interactions bottom sheet requires `setShowMobileInteractions(true)` separately from `setSelectedContactId`
+
 ## Development Patterns
 
 ### TypeScript Usage
