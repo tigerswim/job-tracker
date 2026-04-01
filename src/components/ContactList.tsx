@@ -17,6 +17,7 @@ import {
   Trash2,
   X,
   MessageCircle,
+  MessageSquare,
   Linkedin,
   User,
   GraduationCap,
@@ -32,6 +33,8 @@ import ContactJobLinks from './ContactJobLinks'
 import ContactFilter from './ContactFilter'
 import CreateReminderModal from './modals/CreateReminderModal'
 import { DM_Sans, Archivo } from 'next/font/google'
+import { searchInteractions, InteractionSearchResult } from '@/lib/interactions'
+import InteractionSearchResultCard from '@/components/InteractionSearchResult'
 
 const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '700'] })
 const archivo = Archivo({ subsets: ['latin'], weight: ['600', '700', '800'] })
@@ -706,6 +709,9 @@ export default function ContactList() {
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [searchMode, setSearchMode] = useState<'contacts' | 'interactions'>('contacts')
+  const [interactionResults, setInteractionResults] = useState<InteractionSearchResult[]>([])
+  const [interactionSearchLoading, setInteractionSearchLoading] = useState(false)
   const [modalContact, setModalContact] = useState<Contact | null>(null)
   const [contactIdToJobs, setContactIdToJobs] = useState<Record<string, any[]>>({})
   const [displayedContactsCount, setDisplayedContactsCount] = useState(20)
@@ -808,6 +814,19 @@ export default function ContactList() {
   useEffect(() => {
     loadContacts(debouncedSearchTerm)
   }, [debouncedSearchTerm])
+
+  useEffect(() => {
+    if (searchMode !== 'interactions') return
+    if (!debouncedSearchTerm.trim()) {
+      setInteractionResults([])
+      return
+    }
+    setInteractionSearchLoading(true)
+    searchInteractions(debouncedSearchTerm).then(results => {
+      setInteractionResults(results)
+      setInteractionSearchLoading(false)
+    })
+  }, [debouncedSearchTerm, searchMode])
 
   const handleDelete = useCallback(async (id: string) => {
     if (confirm('Are you sure you want to delete this contact?')) {
@@ -998,24 +1017,42 @@ export default function ContactList() {
       <div className="space-y-4 lg:space-y-0">
         {/* Desktop and Tablet: Single row with search and actions (768px and up) */}
         <div className="hidden lg:flex justify-between items-center gap-4">
-          {/* Search Bar - V2 Style */}
-          <div className="relative flex-1 max-w-2xl">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search contacts by name, company, email, experience, education, or connections..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full px-4 py-3 pl-12 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors ${dmSans.className}`}
-            />
-            {searchTerm && (
+          {/* Search mode toggle + bar */}
+          <div className="flex flex-col gap-2 flex-1 max-w-2xl">
+            {/* Mode toggle */}
+            <div className="flex items-center gap-1 self-start bg-slate-100 rounded-lg p-1 border border-slate-200">
               <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                onClick={() => { setSearchMode('contacts'); setSearchTerm(''); setInteractionResults([]) }}
+                className={`px-3 py-1 rounded-md text-sm font-semibold transition-all duration-150 ${searchMode === 'contacts' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'} ${dmSans.className}`}
               >
-                <X className="w-5 h-5" />
+                Contacts
               </button>
-            )}
+              <button
+                onClick={() => { setSearchMode('interactions'); setSearchTerm(''); setInteractionResults([]) }}
+                className={`px-3 py-1 rounded-md text-sm font-semibold transition-all duration-150 ${searchMode === 'interactions' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'} ${dmSans.className}`}
+              >
+                Interactions
+              </button>
+            </div>
+            {/* Search Bar - V2 Style */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder={searchMode === 'contacts' ? 'Search contacts by name, company, email, experience, education, or connections...' : 'Search interactions by summary, notes, or contact name...'}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`w-full px-4 py-3 pl-12 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors ${dmSans.className}`}
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center space-x-3">
@@ -1054,12 +1091,27 @@ export default function ContactList() {
             </div>
           </div>
 
+          {/* Mode toggle */}
+          <div className="flex items-center gap-1 mb-2 bg-slate-100 rounded-lg p-1 border border-slate-200 self-start">
+            <button
+              onClick={() => { setSearchMode('contacts'); setSearchTerm(''); setInteractionResults([]) }}
+              className={`px-3 py-1 rounded-md text-sm font-semibold transition-all duration-150 ${searchMode === 'contacts' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'} ${dmSans.className}`}
+            >
+              Contacts
+            </button>
+            <button
+              onClick={() => { setSearchMode('interactions'); setSearchTerm(''); setInteractionResults([]) }}
+              className={`px-3 py-1 rounded-md text-sm font-semibold transition-all duration-150 ${searchMode === 'interactions' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'} ${dmSans.className}`}
+            >
+              Interactions
+            </button>
+          </div>
           {/* Search Bar - Full width on mobile */}
           <div className="relative w-full">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search contacts..."
+              placeholder={searchMode === 'contacts' ? 'Search contacts...' : 'Search interactions...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className={`w-full px-4 py-3 pl-12 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors ${dmSans.className}`}
@@ -1080,84 +1132,124 @@ export default function ContactList() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Contact List - Flexible Width */}
         <div className="flex-1 min-w-0 contacts-main-area px-4 sm:px-0">
-          {displayedContacts.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-500 mb-2">
-                {searchTerm ? 'No contacts found' : 'No contacts yet'}
-              </h3>
-              <p className="text-slate-400 mb-6">
-                {searchTerm 
-                  ? 'Try adjusting your search terms or clear the search to see all contacts.'
-                  : 'Start building your professional network by adding your first contact.'
-                }
-              </p>
-              {!searchTerm && (
-                <button
-                  onClick={() => setShowForm(true)}
-                  className="btn-primary"
-                >
-                  Add Your First Contact
-                </button>
-              )}
-            </div>
-          ) : (
+          {searchMode === 'contacts' ? (
             <>
-              {/* Contact Cards in Grid Layout - Dynamic responsive grid */}
-              <div 
-                className="grid gap-4"
-                style={{
-                  gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
-                  transition: 'grid-template-columns 0.3s ease'
-                }}
-              >
-                {displayedContacts.map((contact, index) => (
-                  <ContactCard
-                    key={contact.id}
-                    contact={contact}
-                    index={index}
-                    isSelected={selectedContactId === contact.id}
-                    contactIdToJobs={contactIdToJobs}
-                    contactNameMap={contactNameMap}
-                    onClick={(id) => {
-                      setSelectedContactId(id)
-                      // On mobile, show bottom sheet when contact is selected
-                      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                        setShowMobileInteractions(true)
-                      }
-                    }}
-                    onEdit={handleEditContact}
-                    onDelete={handleDelete}
-                    onMutualConnectionClick={handleMutualConnectionClick}
-                    onCreateReminder={handleCreateReminder}
-                  />
-                ))}
-              </div>
-
-              {/* Load More Button */}
-              {hasMoreContacts && (
-                <div className="text-center py-6">
-                  <button
-                    onClick={loadMoreContacts}
-                    disabled={isLoadingMore}
-                    className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                      isLoadingMore 
-                        ? 'bg-slate-200 text-slate-500 cursor-not-allowed' 
-                        : 'bg-blue-500 text-white hover:bg-blue-600 hover:scale-105'
-                    }`}
-                  >
-                    {isLoadingMore ? (
-                      <span className="flex items-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
-                        <span>Loading...</span>
-                      </span>
-                    ) : (
-                      `Load More Contacts (${filteredContacts.length - displayedContactsCount} remaining)`
-                    )}
-                  </button>
+              {displayedContacts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-500 mb-2">
+                    {searchTerm ? 'No contacts found' : 'No contacts yet'}
+                  </h3>
+                  <p className="text-slate-400 mb-6">
+                    {searchTerm
+                      ? 'Try adjusting your search terms or clear the search to see all contacts.'
+                      : 'Start building your professional network by adding your first contact.'
+                    }
+                  </p>
+                  {!searchTerm && (
+                    <button
+                      onClick={() => setShowForm(true)}
+                      className="btn-primary"
+                    >
+                      Add Your First Contact
+                    </button>
+                  )}
                 </div>
+              ) : (
+                <>
+                  {/* Contact Cards in Grid Layout - Dynamic responsive grid */}
+                  <div
+                    className="grid gap-4"
+                    style={{
+                      gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
+                      transition: 'grid-template-columns 0.3s ease'
+                    }}
+                  >
+                    {displayedContacts.map((contact, index) => (
+                      <ContactCard
+                        key={contact.id}
+                        contact={contact}
+                        index={index}
+                        isSelected={selectedContactId === contact.id}
+                        contactIdToJobs={contactIdToJobs}
+                        contactNameMap={contactNameMap}
+                        onClick={(id) => {
+                          setSelectedContactId(id)
+                          // On mobile, show bottom sheet when contact is selected
+                          if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                            setShowMobileInteractions(true)
+                          }
+                        }}
+                        onEdit={handleEditContact}
+                        onDelete={handleDelete}
+                        onMutualConnectionClick={handleMutualConnectionClick}
+                        onCreateReminder={handleCreateReminder}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Load More Button */}
+                  {hasMoreContacts && (
+                    <div className="text-center py-6">
+                      <button
+                        onClick={loadMoreContacts}
+                        disabled={isLoadingMore}
+                        className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                          isLoadingMore
+                            ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600 hover:scale-105'
+                        }`}
+                      >
+                        {isLoadingMore ? (
+                          <span className="flex items-center space-x-2">
+                            <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                            <span>Loading...</span>
+                          </span>
+                        ) : (
+                          `Load More Contacts (${filteredContacts.length - displayedContactsCount} remaining)`
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </>
+          ) : (
+            <div className="space-y-3">
+              {!debouncedSearchTerm.trim() ? (
+                <div className="text-center py-12">
+                  <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <p className={`text-slate-400 ${dmSans.className}`}>Type to search your interactions</p>
+                </div>
+              ) : interactionSearchLoading ? (
+                <div className="space-y-3">
+                  {[1,2,3].map(i => (
+                    <div key={i} className="h-24 rounded-xl bg-slate-100 animate-pulse" />
+                  ))}
+                </div>
+              ) : interactionResults.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <p className={`text-slate-500 ${dmSans.className}`}>No interactions found for &ldquo;{debouncedSearchTerm}&rdquo;</p>
+                </div>
+              ) : (
+                <>
+                  <p className={`text-sm text-slate-500 ${dmSans.className}`}>{interactionResults.length} result{interactionResults.length !== 1 ? 's' : ''}</p>
+                  {interactionResults.map(result => (
+                    <InteractionSearchResultCard
+                      key={result.id}
+                      result={result}
+                      onOpenContact={(contactId) => {
+                        setSearchMode('contacts')
+                        setSearchTerm('')
+                        setInteractionResults([])
+                        setSelectedContactId(contactId)
+                      }}
+                    />
+                  ))}
+                </>
+              )}
+            </div>
           )}
         </div>
 
