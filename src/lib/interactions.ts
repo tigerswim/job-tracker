@@ -419,24 +419,51 @@ export async function searchInteractions(searchTerm: string): Promise<Interactio
       }
     }
 
-    const { data, error } = await supabase
-      .from('interactions')
-      .select(`
-        id, contact_id, type, date, summary, notes, user_id, created_at, updated_at,
-        contacts!inner(name, company)
-      `)
-      .eq('user_id', user.id)
-      .or(`summary.ilike.%${term}%,notes.ilike.%${term}%`)
-      .or(`name.ilike.%${term}%,company.ilike.%${term}%`, { referencedTable: 'contacts' })
-      .order('date', { ascending: false })
-      .limit(50)
+    const selectFields = `
+      id, contact_id, type, date, summary, notes, user_id, created_at, updated_at,
+      contacts!inner(name, company)
+    `
 
-    if (error) {
-      console.error('Error searching interactions:', error)
+    // Run two queries and merge: one for interaction text, one for contact name/company
+    const [textResult, contactResult] = await Promise.all([
+      supabase
+        .from('interactions')
+        .select(selectFields)
+        .eq('user_id', user.id)
+        .or(`summary.ilike.%${term}%,notes.ilike.%${term}%`)
+        .order('date', { ascending: false })
+        .limit(50),
+      supabase
+        .from('interactions')
+        .select(selectFields)
+        .eq('user_id', user.id)
+        .or(`name.ilike.%${term}%,company.ilike.%${term}%`, { referencedTable: 'contacts' })
+        .order('date', { ascending: false })
+        .limit(50),
+    ])
+
+    if (textResult.error) {
+      console.error('Error searching interactions by text:', textResult.error)
+      return []
+    }
+    if (contactResult.error) {
+      console.error('Error searching interactions by contact:', contactResult.error)
       return []
     }
 
-    return (data || []).map((row: SearchRow) => ({
+    // Merge and deduplicate by id, preserving date order
+    const seen = new Set<string>()
+    const merged: SearchRow[] = []
+    for (const row of [...(textResult.data || []), ...(contactResult.data || [])]) {
+      if (!seen.has(row.id)) {
+        seen.add(row.id)
+        merged.push(row as SearchRow)
+      }
+    }
+    merged.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    const data = merged.slice(0, 50)
+
+    return data.map((row: SearchRow) => ({
       id: row.id,
       contact_id: row.contact_id,
       type: row.type,
