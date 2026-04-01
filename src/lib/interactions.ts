@@ -2,6 +2,11 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Interaction } from './supabase'
 
+export interface InteractionSearchResult extends Interaction {
+  contact_name: string
+  contact_company: string | null
+}
+
 // Cache implementation for interactions
 const CACHE_DURATION = 2 * 60 * 1000 // 2 minutes
 const interactionsCache = new Map<string, { data: Interaction[], timestamp: number }>()
@@ -370,7 +375,7 @@ export async function getInteractionStats(contactId: string): Promise<{
 
   try {
     const interactions = await getInteractions(contactId)
-    
+
     const stats = {
       total: interactions.length,
       byType: {} as Record<string, number>,
@@ -388,3 +393,43 @@ export async function getInteractionStats(contactId: string): Promise<{
   }
 }
 
+export async function searchInteractions(searchTerm: string): Promise<InteractionSearchResult[]> {
+  if (!searchTerm.trim()) return []
+
+  try {
+    const supabase = createClientComponentClient()
+    const term = searchTerm.trim()
+
+    const { data, error } = await supabase
+      .from('interactions')
+      .select(`
+        id, contact_id, type, date, summary, notes, user_id, created_at, updated_at,
+        contacts!inner(name, company)
+      `)
+      .or(`summary.ilike.%${term}%,notes.ilike.%${term}%,contacts.name.ilike.%${term}%,contacts.company.ilike.%${term}%`)
+      .order('date', { ascending: false })
+      .limit(50)
+
+    if (error) {
+      console.error('Error searching interactions:', error)
+      return []
+    }
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      contact_id: row.contact_id,
+      type: row.type,
+      date: row.date,
+      summary: row.summary,
+      notes: row.notes,
+      user_id: row.user_id,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      contact_name: row.contacts[0]?.name || '',
+      contact_company: row.contacts[0]?.company ?? null,
+    }))
+  } catch (err) {
+    console.error('Exception in searchInteractions:', err)
+    return []
+  }
+}
