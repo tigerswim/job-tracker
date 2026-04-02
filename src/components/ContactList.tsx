@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Contact } from '@/lib/supabase'
 import { getContactsLite, getContactById, deleteContact, searchContacts } from '@/lib/contacts'
 import { getJobsForContacts } from '@/lib/jobContacts'
@@ -702,6 +703,7 @@ const useDebounce = (value: string, delay: number) => {
 }
 
 export default function ContactList() {
+  const queryClient = useQueryClient()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [allContacts, setAllContacts] = useState<Contact[]>([]) // Full unfiltered list for name lookup and suggestions
   const [loading, setLoading] = useState(true)
@@ -775,42 +777,67 @@ export default function ContactList() {
   // Debounced search term for performance
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY)
 
-  const loadContacts = useCallback(async (term = '') => {
-    if (!term.trim()) setLoading(true)
-    try {
-      let data: Contact[]
+  // Cached base contact list — survives tab switches for up to 5 minutes
+  const { data: cachedContacts, isLoading: cachedLoading } = useQuery({
+    queryKey: ['contacts'],
+    queryFn: async () => {
+      const data = await getContactsLite() as unknown as Contact[]
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+  })
 
-      if (term.trim()) {
-        // Server-side search — no need to scan all contacts in JS
-        const result = await searchContacts({ searchTerm: term, limit: 200 })
-        data = result.contacts as unknown as Contact[]
-      } else {
-        data = await getContactsLite() as unknown as Contact[]
-        // Keep full list in sync for name lookups and suggestions
-        setAllContacts(data)
-      }
-
-      setContacts(data)
+  // Sync cached contacts into local state and kick off job counts
+  useEffect(() => {
+    if (!debouncedSearchTerm.trim() && cachedContacts) {
+      setContacts(cachedContacts)
+      setAllContacts(cachedContacts)
       setLoading(false)
-
-      // Load job counts in parallel (non-blocking UI)
-      if (data.length > 0) {
-        getJobsForContacts(data.map((c) => c.id))
+      if (cachedContacts.length > 0) {
+        getJobsForContacts(cachedContacts.map((c) => c.id))
           .then((map) => setContactIdToJobs(map))
           .catch((e) => {
             console.error('Error fetching jobs for contacts:', e)
             setContactIdToJobs({})
           })
       }
-    } catch (error) {
-      console.error('Error loading contacts:', error)
-      setLoading(false)
     }
-  }, [])
+  }, [cachedContacts, debouncedSearchTerm])
 
+  // Search path — not cached (results are query-specific)
   useEffect(() => {
-    loadContacts(debouncedSearchTerm)
+    if (!debouncedSearchTerm.trim()) return
+    setLoading(true)
+    searchContacts({ searchTerm: debouncedSearchTerm, limit: 200 })
+      .then((result) => {
+        const data = result.contacts as unknown as Contact[]
+        setContacts(data)
+        setLoading(false)
+        if (data.length > 0) {
+          getJobsForContacts(data.map((c) => c.id))
+            .then((map) => setContactIdToJobs(map))
+            .catch((e) => {
+              console.error('Error fetching jobs for contacts:', e)
+              setContactIdToJobs({})
+            })
+        }
+      })
+      .catch((error) => {
+        console.error('Error searching contacts:', error)
+        setLoading(false)
+      })
   }, [debouncedSearchTerm])
+
+  // Loading state: use cached loading on initial mount (no search term)
+  useEffect(() => {
+    if (!debouncedSearchTerm.trim()) {
+      setLoading(cachedLoading)
+    }
+  }, [cachedLoading, debouncedSearchTerm])
+
+  const loadContacts = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['contacts'] })
+  }, [queryClient])
 
   useEffect(() => {
     if (searchMode !== 'interactions') return
@@ -831,24 +858,23 @@ export default function ContactList() {
     if (confirm('Are you sure you want to delete this contact?')) {
       const success = await deleteContact(id)
       if (success) {
-        loadContacts(debouncedSearchTerm)
+        loadContacts()
         if (selectedContactId === id) {
           setSelectedContactId(null)
         }
       }
     }
-  }, [selectedContactId, loadContacts, debouncedSearchTerm])
+  }, [selectedContactId, loadContacts])
 
   const handleFormSuccess = useCallback(() => {
     setShowForm(false)
     setEditingContact(null)
-    loadContacts(debouncedSearchTerm)
-  }, [loadContacts, debouncedSearchTerm])
+    loadContacts()
+  }, [loadContacts])
 
-  const handleEditContact = useCallback(async (contact: Contact) => {
-    // Load full contact data for editing
-    const fullContact = await getContactById(contact.id)
-    setEditingContact(fullContact || contact)
+  const handleEditContact = useCallback((contact: Contact) => {
+    // Contact already has all fields from getContactsLite — no re-fetch needed
+    setEditingContact(contact)
     setShowForm(true)
   }, [])
 
