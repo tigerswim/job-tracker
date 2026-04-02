@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Job, Contact } from '@/lib/supabase'
 import { fetchJobsWithContacts, deleteJob, JobWithContacts, clearJobsCache } from '@/lib/jobs'
 import {
@@ -732,6 +733,8 @@ const StatusFilter = memo(({
 StatusFilter.displayName = 'StatusFilter'
 
 export default function JobList() {
+  const queryClient = useQueryClient()
+
   // State management
   const [state, setState] = useState<JobListState>({
     jobs: [],
@@ -898,7 +901,7 @@ export default function JobList() {
     setSelectedJob(null)
     // Reload data to get updated contacts
     loadJobs()
-  }, [])
+  }, [loadJobs])
 
   const handleJobFormSubmit = useCallback((job: Job) => {
     if (selectedJob) {
@@ -913,7 +916,7 @@ export default function JobList() {
     }
     setShowJobForm(false)
     setSelectedJob(null)
-  }, [selectedJob])
+  }, [selectedJob, loadJobs])
 
   const handleAddJob = useCallback(() => {
     setShowJobForm(true)
@@ -940,23 +943,26 @@ export default function JobList() {
   }, [])
 
   // Simplified data loading function
-  const loadJobs = useCallback(async () => {
-    console.log('Loading jobs...')
-    setState(prev => ({ ...prev, loading: true, error: null }))
-    
-    try {
-      const jobsWithContacts = await fetchJobsWithContacts()
-      console.log('Loaded jobs:', jobsWithContacts.length)
-      
-      setState(prev => ({
-        ...prev,
-        jobs: jobsWithContacts,
-        loading: false,
-        error: null
-      }))
+  // Cached job list — survives tab switches for up to 5 minutes
+  const { data: cachedJobs, isLoading: jobsLoading, error: jobsError, refetch: refetchJobs } = useQuery({
+    queryKey: ['jobs'],
+    queryFn: fetchJobsWithContacts,
+    staleTime: 5 * 60 * 1000,
+  })
 
-      // Set jobs for reminder modal
-      setJobs(jobsWithContacts.map(j => ({
+  // Sync React Query result into existing state shape
+  useEffect(() => {
+    if (jobsLoading) {
+      setState(prev => ({ ...prev, loading: true, error: null }))
+      return
+    }
+    if (jobsError) {
+      setState(prev => ({ ...prev, error: 'Failed to load jobs. Please try refreshing the page.', loading: false }))
+      return
+    }
+    if (cachedJobs) {
+      setState(prev => ({ ...prev, jobs: cachedJobs, loading: false, error: null }))
+      setJobs(cachedJobs.map(j => ({
         id: j.id,
         job_title: j.job_title,
         company: j.company,
@@ -967,28 +973,21 @@ export default function JobList() {
         created_at: j.created_at,
         updated_at: j.updated_at
       })))
-    } catch (error) {
-      console.error('Error loading jobs:', error)
-      setState(prev => ({
-        ...prev,
-        error: 'Failed to load jobs. Please try refreshing the page.',
-        loading: false
-      }))
     }
-  }, [])
+  }, [cachedJobs, jobsLoading, jobsError])
+
+  const loadJobs = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['jobs'] })
+  }, [queryClient])
 
   const handleRetry = useCallback(() => {
-    loadJobs()
-  }, [loadJobs])
+    refetchJobs()
+  }, [refetchJobs])
 
   const handleClearCacheRetry = useCallback(() => {
-    loadJobs()
-  }, [loadJobs])
-
-  // Load data on component mount
-  useEffect(() => {
-    loadJobs()
-  }, [loadJobs])
+    clearJobsCache()
+    refetchJobs()
+  }, [refetchJobs])
 
   // Load contacts for reminder modal (you might want to implement getContacts if not available)
   useEffect(() => {
