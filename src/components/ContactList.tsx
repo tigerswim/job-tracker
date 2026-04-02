@@ -793,17 +793,14 @@ export default function ContactList() {
       setContacts(data)
       setLoading(false)
 
-      // Load job counts in background (non-blocking UI)
+      // Load job counts in parallel (non-blocking UI)
       if (data.length > 0) {
-        setTimeout(async () => {
-          try {
-            const map = await getJobsForContacts(data.map((c) => c.id))
-            setContactIdToJobs(map)
-          } catch (e) {
+        getJobsForContacts(data.map((c) => c.id))
+          .then((map) => setContactIdToJobs(map))
+          .catch((e) => {
             console.error('Error fetching jobs for contacts:', e)
             setContactIdToJobs({})
-          }
-        }, 50)
+          })
       }
     } catch (error) {
       console.error('Error loading contacts:', error)
