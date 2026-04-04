@@ -49,7 +49,7 @@ import BottomSheet from './ui/BottomSheet'
 
 // Constants for performance
 const CONTACTS_PER_PAGE = 50
-const DEBOUNCE_DELAY = 300
+const DEBOUNCE_DELAY = 600
 
 // Smart text truncation component (similar to InteractionCard)
 const TruncatedText = ({ 
@@ -789,8 +789,7 @@ export default function ContactList() {
 
   // Sync cached contacts into local state and kick off job counts
   useEffect(() => {
-    if (!debouncedSearchTerm.trim() && cachedContacts) {
-      setContacts(cachedContacts)
+    if (cachedContacts) {
       setAllContacts(cachedContacts)
       setLoading(false)
       if (cachedContacts.length > 0) {
@@ -802,38 +801,30 @@ export default function ContactList() {
           })
       }
     }
-  }, [cachedContacts, debouncedSearchTerm])
+  }, [cachedContacts])
 
-  // Search path — not cached (results are query-specific)
+  // Client-side filtering — instant, no network requests
   useEffect(() => {
-    if (!debouncedSearchTerm.trim()) return
-    setLoading(true)
-    searchContacts({ searchTerm: debouncedSearchTerm, limit: 200 })
-      .then((result) => {
-        const data = result.contacts as unknown as Contact[]
-        setContacts(data)
-        setLoading(false)
-        if (data.length > 0) {
-          getJobsForContacts(data.map((c) => c.id))
-            .then((map) => setContactIdToJobs(map))
-            .catch((e) => {
-              console.error('Error fetching jobs for contacts:', e)
-              setContactIdToJobs({})
-            })
-        }
-      })
-      .catch((error) => {
-        console.error('Error searching contacts:', error)
-        setLoading(false)
-      })
-  }, [debouncedSearchTerm])
-
-  // Loading state: use cached loading on initial mount (no search term)
-  useEffect(() => {
-    if (!debouncedSearchTerm.trim()) {
-      setLoading(cachedLoading)
+    if (!cachedContacts) return
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) {
+      setContacts(cachedContacts)
+      return
     }
-  }, [cachedLoading, debouncedSearchTerm])
+    setContacts(cachedContacts.filter(c =>
+      c.name?.toLowerCase().includes(term) ||
+      c.company?.toLowerCase().includes(term) ||
+      c.job_title?.toLowerCase().includes(term) ||
+      c.email?.toLowerCase().includes(term) ||
+      c.current_location?.toLowerCase().includes(term) ||
+      c.notes?.toLowerCase().includes(term)
+    ))
+  }, [searchTerm, cachedContacts])
+
+  // Loading state: reflect React Query loading on initial mount
+  useEffect(() => {
+    setLoading(cachedLoading)
+  }, [cachedLoading])
 
   const loadContacts = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['contacts'] })
@@ -986,7 +977,7 @@ export default function ContactList() {
   // Reset pagination when search changes
   useEffect(() => {
     setDisplayedContactsCount(20)
-  }, [debouncedSearchTerm])
+  }, [searchTerm])
 
   // Load jobs for reminder modal
   useEffect(() => {
