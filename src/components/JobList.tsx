@@ -896,6 +896,53 @@ export default function JobList() {
     setShowReminderModal(true)
   }, [])
 
+  // Cached job list — survives tab switches for up to 5 minutes
+  // Declared before callbacks that reference loadJobs to avoid TDZ in minified output
+  const { data: cachedJobs, isLoading: jobsLoading, error: jobsError, refetch: refetchJobs } = useQuery({
+    queryKey: ['jobs'],
+    queryFn: fetchJobsWithContacts,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const loadJobs = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['jobs'] })
+  }, [queryClient])
+
+  const handleRetry = useCallback(() => {
+    refetchJobs()
+  }, [refetchJobs])
+
+  const handleClearCacheRetry = useCallback(() => {
+    clearJobsCache()
+    refetchJobs()
+  }, [refetchJobs])
+
+  // Sync React Query result into existing state shape
+  useEffect(() => {
+    if (jobsLoading) {
+      setState(prev => ({ ...prev, loading: true, error: null }))
+      return
+    }
+    if (jobsError) {
+      setState(prev => ({ ...prev, error: 'Failed to load jobs. Please try refreshing the page.', loading: false }))
+      return
+    }
+    if (cachedJobs) {
+      setState(prev => ({ ...prev, jobs: cachedJobs, loading: false, error: null }))
+      setJobs(cachedJobs.map(j => ({
+        id: j.id,
+        job_title: j.job_title,
+        company: j.company,
+        status: j.status,
+        location: j.location,
+        salary: j.salary,
+        notes: j.notes,
+        created_at: j.created_at,
+        updated_at: j.updated_at
+      })))
+    }
+  }, [cachedJobs, jobsLoading, jobsError])
+
   const handleCloseContactManager = useCallback(() => {
     setShowContactManager(false)
     setSelectedJob(null)
@@ -941,53 +988,6 @@ export default function JobList() {
     setReminderJob(null)
     // Could optionally show a success message or refresh data
   }, [])
-
-  // Simplified data loading function
-  // Cached job list — survives tab switches for up to 5 minutes
-  const { data: cachedJobs, isLoading: jobsLoading, error: jobsError, refetch: refetchJobs } = useQuery({
-    queryKey: ['jobs'],
-    queryFn: fetchJobsWithContacts,
-    staleTime: 5 * 60 * 1000,
-  })
-
-  // Sync React Query result into existing state shape
-  useEffect(() => {
-    if (jobsLoading) {
-      setState(prev => ({ ...prev, loading: true, error: null }))
-      return
-    }
-    if (jobsError) {
-      setState(prev => ({ ...prev, error: 'Failed to load jobs. Please try refreshing the page.', loading: false }))
-      return
-    }
-    if (cachedJobs) {
-      setState(prev => ({ ...prev, jobs: cachedJobs, loading: false, error: null }))
-      setJobs(cachedJobs.map(j => ({
-        id: j.id,
-        job_title: j.job_title,
-        company: j.company,
-        status: j.status,
-        location: j.location,
-        salary: j.salary,
-        notes: j.notes,
-        created_at: j.created_at,
-        updated_at: j.updated_at
-      })))
-    }
-  }, [cachedJobs, jobsLoading, jobsError])
-
-  const loadJobs = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['jobs'] })
-  }, [queryClient])
-
-  const handleRetry = useCallback(() => {
-    refetchJobs()
-  }, [refetchJobs])
-
-  const handleClearCacheRetry = useCallback(() => {
-    clearJobsCache()
-    refetchJobs()
-  }, [refetchJobs])
 
   // Load contacts for reminder modal (you might want to implement getContacts if not available)
   useEffect(() => {
