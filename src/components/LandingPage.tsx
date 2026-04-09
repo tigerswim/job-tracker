@@ -96,10 +96,11 @@ export default function LandingPage() {
               <div>
                 <button
                   onClick={() => setShowModal(true)}
-                  className="group px-10 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xl font-bold rounded-2xl shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-300 inline-flex items-center gap-3"
+                  className="group px-10 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xl font-bold rounded-2xl shadow-2xl hover:shadow-3xl active:scale-[0.97] active:shadow-lg inline-flex items-center gap-3"
+                  style={{ transition: 'box-shadow 150ms ease-out, transform 150ms ease-out' }}
                 >
                   See Who Can Help You in 30 Seconds
-                  <Rocket className="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                  <Rocket className="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-150" />
                 </button>
               </div>
             </div>
@@ -182,7 +183,7 @@ export default function LandingPage() {
                   <div className="px-4 pb-6">
                     <div className="grid grid-cols-3 gap-3">
                     {/* Contact 1 */}
-                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm cursor-pointer animate-slide-up" style={{ animationDelay: '0ms', animationFillMode: 'both' }}>
                       {/* Header with name and icon */}
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-2 flex-1 min-w-0">
@@ -221,7 +222,7 @@ export default function LandingPage() {
                     </div>
 
                     {/* Contact 2 */}
-                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm cursor-pointer animate-slide-up" style={{ animationDelay: '50ms', animationFillMode: 'both' }}>
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-2 flex-1 min-w-0">
                           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -255,7 +256,7 @@ export default function LandingPage() {
                     </div>
 
                     {/* Contact 3 */}
-                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm cursor-pointer animate-slide-up" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-2 flex-1 min-w-0">
                           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -284,7 +285,7 @@ export default function LandingPage() {
                     </div>
 
                     {/* Contact 4 - Second Row */}
-                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm cursor-pointer animate-slide-up" style={{ animationDelay: '150ms', animationFillMode: 'both' }}>
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-2 flex-1 min-w-0">
                           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -313,7 +314,7 @@ export default function LandingPage() {
                     </div>
 
                     {/* Contact 5 */}
-                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm cursor-pointer animate-slide-up" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-2 flex-1 min-w-0">
                           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -347,7 +348,7 @@ export default function LandingPage() {
                     </div>
 
                     {/* Contact 6 */}
-                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 shadow-sm cursor-pointer animate-slide-up" style={{ animationDelay: '250ms', animationFillMode: 'both' }}>
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-2 flex-1 min-w-0">
                           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
