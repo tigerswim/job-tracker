@@ -59,10 +59,11 @@ body {
   @apply border-slate-300 bg-white;
 }
 
-.btn-primary { 
-  @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium px-6 py-3 rounded-lg 
+.btn-primary {
+  @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium px-6 py-3 rounded-lg
          hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30
-         transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5; 
+         shadow-lg hover:shadow-xl active:shadow-sm active:scale-[0.97];
+  transition: background-image 200ms ease-out, box-shadow 150ms ease-out, transform 150ms ease-out;
 }
 
 .btn-secondary {
@@ -148,7 +149,7 @@ body {
 
 /* Animation utilities */
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .animate-slide-up {
@@ -160,7 +161,7 @@ body {
 }
 
 .animate-slide-in-right {
-  animation: slideInRight 0.3s ease-out;
+  animation: slideInRight 0.3s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @keyframes fadeIn {
@@ -198,6 +199,14 @@ body {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -302,11 +311,11 @@ body {
 @keyframes modalAppear {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(-20px);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1);
   }
 }
 
@@ -337,15 +346,17 @@ body {
   cursor: pointer;
   z-index: 1001;
   color: #475569;
-  transition: all 0.2s ease;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out, transform 150ms ease-out;
   backdrop-filter: blur(8px);
 }
 
-.modal-close-button:hover {
-  background: rgba(248, 250, 252, 0.95);
-  border-color: rgba(148, 163, 184, 0.5);
-  color: #334155;
-  transform: scale(1.05);
+@media (hover: hover) and (pointer: fine) {
+  .modal-close-button:hover {
+    background: rgba(248, 250, 252, 0.95);
+    border-color: rgba(148, 163, 184, 0.5);
+    color: #334155;
+    transform: scale(1.05);
+  }
 }
 
 .modal-close-button:focus {
@@ -588,11 +599,13 @@ body {
 
 /* Interaction Card Enhancements */
 .interaction-card-compact {
-  @apply transition-all duration-200 ease-out;
+  transition: box-shadow 200ms ease-out, transform 150ms ease-out;
 }
 
-.interaction-card-compact:hover {
-  @apply shadow-sm scale-[1.02];
+@media (hover: hover) and (pointer: fine) {
+  .interaction-card-compact:hover {
+    @apply shadow-sm scale-[1.02];
+  }
 }
 
 /* Line clamp utilities for better text truncation */
