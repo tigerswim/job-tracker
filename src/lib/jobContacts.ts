@@ -234,33 +234,41 @@ export async function getJobsForContacts(
       throw new Error('Auth session missing!')
     }
 
-    // Fetch all links for the provided contacts in a single query
-    const { data, error } = await supabase
-      .from('job_contacts')
-      .select(`
-        contact_id,
-        jobs (
-          id,
-          job_title,
-          company,
-          status,
-          location
-        )
-      `)
-      .in('contact_id', validContactIds)
-      .eq('user_id', user.id)
-
-    if (error) {
-      throw new Error(`Database error: ${error.message}`)
+    // Chunk IDs to avoid Supabase URL length limits (~500 per request)
+    const CHUNK_SIZE = 500
+    const chunks: string[][] = []
+    for (let i = 0; i < validContactIds.length; i += CHUNK_SIZE) {
+      chunks.push(validContactIds.slice(i, i + CHUNK_SIZE))
     }
 
     const map: Record<string, LinkedJob[]> = {}
-    for (const row of data || []) {
-      const cid = (row as any).contact_id as string
-      const job = (row as any).jobs as LinkedJob
-      if (!cid || !job) continue
-      if (!map[cid]) map[cid] = []
-      map[cid].push(job)
+    for (const chunk of chunks) {
+      const { data, error } = await supabase
+        .from('job_contacts')
+        .select(`
+          contact_id,
+          jobs (
+            id,
+            job_title,
+            company,
+            status,
+            location
+          )
+        `)
+        .in('contact_id', chunk)
+        .eq('user_id', user.id)
+
+      if (error) {
+        throw new Error(`Database error: ${error.message}`)
+      }
+
+      for (const row of data || []) {
+        const cid = (row as any).contact_id as string
+        const job = (row as any).jobs as LinkedJob
+        if (!cid || !job) continue
+        if (!map[cid]) map[cid] = []
+        map[cid].push(job)
+      }
     }
 
     return map
