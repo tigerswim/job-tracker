@@ -64,6 +64,7 @@ export async function getContactsLite(): Promise<Pick<Contact,
       .select('id,name,company,job_title,email,phone,current_location,linkedin_url,notes,mutual_connections,experience,education,created_at,updated_at,user_id')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
+      .limit(5000)
 
     if (error) {
       console.error('Error fetching contacts (lite):', error)
