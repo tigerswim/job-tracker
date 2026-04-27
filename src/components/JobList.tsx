@@ -385,7 +385,8 @@ const JobTableRow = memo(({
   onDelete,
   onManageContacts,
   onContactClick,
-  onCreateReminder
+  onCreateReminder,
+  showSalary
 }: {
   job: JobWithContacts
   onEdit: (job: Job) => void
@@ -393,6 +394,7 @@ const JobTableRow = memo(({
   onManageContacts: (job: Job) => void
   onContactClick: (contact: Contact) => void
   onCreateReminder: (job: Job) => void
+  showSalary: boolean
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -466,9 +468,11 @@ const JobTableRow = memo(({
         <td className="px-4 py-3 text-sm text-gray-500 hidden md:table-cell">
           {job.location || '—'}
         </td>
-        <td className="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell">
-          {job.salary || '—'}
-        </td>
+        {showSalary && (
+          <td className="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell">
+            {job.salary || '—'}
+          </td>
+        )}
         <td className="px-4 py-3 hidden xl:table-cell">
           <JobContactLinks
             jobId={job.id}
@@ -751,6 +755,8 @@ export default function JobList() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [showContactManager, setShowContactManager] = useState(false)
   
+  const [showSalary, setShowSalary] = useState(false)
+
   // Reminder modal state
   const [showReminderModal, setShowReminderModal] = useState(false)
   const [reminderJob, setReminderJob] = useState<Job | null>(null)
@@ -1127,6 +1133,13 @@ export default function JobList() {
           </div>
 
           <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowSalary(s => !s)}
+              title={showSalary ? 'Hide salary' : 'Show salary'}
+              className={`px-2.5 py-2 text-sm font-bold rounded-lg border-2 transition-colors ${dmSans.className} ${showSalary ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-100 text-slate-500 border-slate-200 hover:border-slate-400 hover:text-slate-700'}`}
+            >
+              $
+            </button>
             <span className={`text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-2 rounded-lg border-2 border-slate-200 ${dmSans.className}`}>
               {processedJobs.length} application{processedJobs.length !== 1 ? 's' : ''}
             </span>
@@ -1147,6 +1160,13 @@ export default function JobList() {
           <div className="flex justify-between items-center mb-4">
             <span className={`text-lg font-bold text-slate-900 ${archivo.className}`}>Jobs</span>
             <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowSalary(s => !s)}
+                title={showSalary ? 'Hide salary' : 'Show salary'}
+                className={`px-2 py-2 text-sm font-bold rounded-lg border-2 transition-colors ${dmSans.className} ${showSalary ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-100 text-slate-500 border-slate-200 hover:border-slate-400 hover:text-slate-700'}`}
+              >
+                $
+              </button>
               <span className={`text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-2 rounded-lg border-2 border-slate-200 ${dmSans.className}`}>
                 {processedJobs.length}
               </span>
@@ -1231,13 +1251,15 @@ export default function JobList() {
                     onSort={handleSort}
                     className="w-[12%] min-w-[80px] hidden md:table-cell"
                   />
-                  <SortableHeader
-                    field="salary"
-                    label="Salary"
-                    sortConfig={sortConfig}
-                    onSort={handleSort}
-                    className="w-[10%] min-w-[80px] hidden lg:table-cell"
-                  />
+                  {showSalary && (
+                    <SortableHeader
+                      field="salary"
+                      label="Salary"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                      className="w-[10%] min-w-[80px] hidden lg:table-cell"
+                    />
+                  )}
                   <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wide w-[14%] min-w-[120px] hidden xl:table-cell">
                     Contacts
                   </th>
@@ -1256,6 +1278,7 @@ export default function JobList() {
                     onManageContacts={handleManageContacts}
                     onContactClick={handleContactClick}
                     onCreateReminder={handleCreateReminder}
+                    showSalary={showSalary}
                   />
                 ))}
               </tbody>
