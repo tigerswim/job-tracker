@@ -111,7 +111,7 @@ All API routes follow consistent patterns:
 
 ### n8n Docker Image Notes
 - Pull from `docker.n8n.io/n8nio/n8n` (current registry) — `n8nio/n8n` on Docker Hub may lag months behind
-- Latest n8n image is **distroless** (no shell, no package manager) — installing tools requires multi-stage Docker build; see `n8n-automation/Dockerfile` for pattern
+- Latest n8n image is **distroless** (no shell, no package manager) — installing tools requires multi-stage Docker build; see `../job-tracker-private/n8n-automation/Dockerfile` for pattern
 - When rebuilding custom image after base image update: `docker compose build --pull --no-cache`
 
 ### n8n 2.x Breaking Changes (upgraded March 2026)
