@@ -86,10 +86,11 @@ export async function POST(request: NextRequest) {
     // Match against both trailing-slash and non-trailing-slash variants
     let existingContact = null
     if (formattedLinkedInUrl) {
+      const urlWithSlash = `${formattedLinkedInUrl}/`
       const { data: linkedInMatch } = await supabase
         .from('contacts')
         .select('*')
-        .or(`linkedin_url.eq.${formattedLinkedInUrl},linkedin_url.eq.${formattedLinkedInUrl}/`)
+        .or(`linkedin_url.eq."${formattedLinkedInUrl}",linkedin_url.eq."${urlWithSlash}"`)
         .limit(1)
 
       if (linkedInMatch && linkedInMatch.length > 0) {
