@@ -93,6 +93,23 @@ where conrelid = 'interactions'::regclass and contype = 'f';
 **Hand back to Claude:** the column lists + the `contact_id` FK delete type
 (this drives the contact-deletion handling in the spec).
 
+### PARTIAL (2026-05-18)
+
+FK delete behavior confirmed:
+- `interactions_contact_id_fkey` → `confdeltype = c` (**CASCADE**)
+- `interactions_user_id_fkey` → `confdeltype = c` (CASCADE)
+
+Impact: design holds as written. Deleting a contact cascade-deletes their
+interactions (incl. Gmail/Calendar-sourced). Rule engine's "trigger
+interaction gone → cancel" path (`shouldSelfCancel`, Task 8) cleans up the
+contact's pending auto-followup reminders on the next run. `review_queue`
+rows are unaffected by cascade (they use `on delete set null` on
+`suggested_contact_id`) — handled separately as already planned. **No
+migration change required.**
+
+STILL NEEDED: the two `information_schema.columns` outputs for `interactions`
+and `email_reminders` (verifies `add column` names + the unique-index columns).
+
 ---
 
 ## P3 — Provision the token encryption key `GOOGLE_TOKEN_ENC_KEY`
