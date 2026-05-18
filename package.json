@@ -11,7 +11,8 @@
     "dev:server": "next dev",
     "sync:obsidian": "npx tsx scripts/sync-to-obsidian.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "oauth:setup": "npx tsx scripts/google-oauth-setup.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",
