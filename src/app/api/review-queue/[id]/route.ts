@@ -17,20 +17,37 @@ export async function POST(req: Request,
     .select('*').eq('id', id).eq('user_id', user.id).single()
   if (!q) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
-  await supa.from('interactions').upsert({
+  // Create the real interaction FIRST and verify it succeeded. If this
+  // fails we must NOT mark the queue item accepted (that silently loses the
+  // interaction — the bug this replaces).
+  const { error: interactionErr } = await supa.from('interactions').upsert({
     user_id: user.id, contact_id: body.contact_id, source: q.source,
     external_id: q.external_id, type: body.type, date: body.date,
     summary: body.summary, notes: body.notes,
   }, { onConflict: 'user_id,contact_id,source,external_id' })
+  if (interactionErr) {
+    return NextResponse.json(
+      { error: `failed to create interaction: ${interactionErr.message}` },
+      { status: 500 })
+  }
 
   if (body.learn_alias && q.counterparty_email) {
-    await supa.from('contact_email_aliases').upsert({
+    const { error: aliasErr } = await supa.from('contact_email_aliases').upsert({
       user_id: user.id, contact_id: body.contact_id,
       email: q.counterparty_email.trim().toLowerCase(), source: 'learned',
     }, { onConflict: 'user_id,email' })
+    // Alias learning is best-effort; the interaction already exists. Log but
+    // don't fail the request (the user's primary action succeeded).
+    if (aliasErr) console.error('alias upsert failed:', aliasErr.message)
   }
-  await supa.from('interaction_review_queue')
+
+  const { error: queueErr } = await supa.from('interaction_review_queue')
     .update({ status: 'accepted' }).eq('id', id)
+  if (queueErr) {
+    return NextResponse.json(
+      { error: `interaction created but queue update failed: ${queueErr.message}` },
+      { status: 500 })
+  }
   return NextResponse.json({ ok: true })
 }
 
