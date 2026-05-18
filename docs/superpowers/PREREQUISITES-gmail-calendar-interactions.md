@@ -210,6 +210,31 @@ Client ID / secret ready as env vars for P5 (`GOOGLE_CLIENT_ID`,
 `GOOGLE_CLIENT_SECRET`) — do not paste them into chat; put them in your local
 gitignored env.
 
+### ✅ MOSTLY RESOLVED (2026-05-18) — deviates from assumed "Testing" mode
+
+Actual state (project "Job Tracker", shared with 4 existing OAuth clients):
+- Gmail API + Google Calendar API: **enabled** ✅
+- New **Desktop** OAuth client created (loopback flow compatible) ✅ — its
+  Client ID/secret to be supplied as local env for P5b (not in chat/git).
+- OAuth consent screen: **External**, publishing status **In Production**
+  (NOT Testing as the plan originally assumed).
+
+Implications of In-Production vs Testing:
+- No "Test users" list applies in Production — step 3's test-user add is moot.
+- `gmail.readonly` is a Google **restricted scope**. Production External apps
+  normally need Google's security assessment for restricted scopes; the common
+  exemption is the project owner consenting to their own app. The project's
+  other Production clients already call Google APIs successfully for this
+  account, so this is expected to work, but verification status was not
+  confirmed from here.
+
+OPEN CHECK before P5b: on the OAuth consent screen, confirm there is no
+"verification required" block on `gmail.readonly`/`calendar.readonly`. If the
+P5b consent shows an "unverified app" interstitial, proceed via
+**Advanced → go to {app} (unsafe)** as the project owner — this is the
+accepted single-user path; recorded here as a known v1 limitation (single
+owner, unverified app, self-consent).
+
 ---
 
 ## P5 — Apply the migration + run OAuth setup (after Phase 3 builds the script)
