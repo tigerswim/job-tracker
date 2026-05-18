@@ -13,9 +13,20 @@ async function importKey(keyHex: string): Promise<CryptoKey> {
 
 const enc = new TextEncoder()
 const dec = new TextDecoder()
-const b64 = (b: ArrayBuffer | Uint8Array) =>
-  Buffer.from(b instanceof Uint8Array ? b : new Uint8Array(b)).toString('base64')
-const unb64 = (s: string) => new Uint8Array(Buffer.from(s, 'base64'))
+// Web-standard base64 (btoa/atob) — works in Node 18+, Deno, and browsers.
+// Deno (Supabase Edge runtime) has no Node `Buffer`, so it must not be used.
+const b64 = (b: ArrayBuffer | Uint8Array) => {
+  const bytes = b instanceof Uint8Array ? b : new Uint8Array(b)
+  let bin = ''
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
+  return btoa(bin)
+}
+const unb64 = (s: string) => {
+  const bin = atob(s)
+  const out = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+  return out
+}
 
 export async function encryptToken(
   plaintext: string, keyHex: string
