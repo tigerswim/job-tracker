@@ -46,6 +46,7 @@ a lost relationship signal and a follow-up reminder that never gets created.
 | Review UI home | Tab vs card vs header | **Card inside Network tab + count badge** |
 | Backfill | History vs forward-only | **Forward-only** from setup date |
 | Review flow | One-tap accept vs edit-before-commit | **Edit-before-commit**: opens in right-slide panel (reuse `InteractionForm`), all fields incl. notes editable before the real interaction is created |
+| Follow-up thresholds | Hardcoded vs user-editable | **User-editable** via a settings UI, persisted in `followup_settings`; spec values are defaults/seeds |
 
 ## Architecture
 
@@ -152,6 +153,31 @@ UNIQUE (user_id, source, external_id)
 Dismissed rows are retained (status `dismissed`) so re-sync never resurfaces a
 dismissed item.
 
+### New table: `followup_settings`
+
+User-editable thresholds for the Phase C rule engine. One row per user
+(single-user now; `user_id`-keyed for the multi-user seam). Seeded with the
+spec defaults on migration.
+
+```
+user_id                       uuid PK references auth.users
+enabled                       boolean not null default true   -- master on/off for auto follow-ups
+email_no_reply_days           integer not null default 7
+meeting_no_followup_days      integer not null default 14
+gone_quiet_days               integer not null default 30
+updated_at                    timestamptz default now()
+```
+RLS by `user_id`. The Edge Function reads this row at the start of Phase C; if
+no row exists it falls back to the coded defaults (defensive — a missing row
+must never disable follow-ups silently). `enabled = false` skips Phase C
+entirely (no creation; existing pending auto-reminders are left alone but still
+self-cancel on reply).
+
+Validation (enforced in the settings API and DB check constraints): each
+threshold an integer between 1 and 365; ordering not enforced (overlapping
+windows are handled by the existing "one auto-reminder per contact per open
+window" de-dup rule).
+
 ### Altered table: `interactions` (additive, nullable — existing rows untouched)
 
 ```
@@ -228,16 +254,21 @@ re-seeing yesterday's items a no-op update.
 Operates only on real `interactions` rows (accepted/auto-written), never queue
 items. Runs after sync in the same function.
 
+At the start of Phase C, read the user's `followup_settings` row (fall back to
+coded defaults if absent). If `enabled = false`, skip creation entirely
+(self-cancellation of existing pending auto-reminders still runs).
+
 "Direction": from the last-direction recorded in `notes` for Gmail. Calendar
 `meeting`/`video_call` = outbound-equivalent (ball in Dan's court).
 
-**Open-loop detection (creates reminders):**
+**Open-loop detection (creates reminders).** Thresholds below are the seeded
+defaults; the live values come from `followup_settings`:
 
-| Trigger | Threshold | Reminder |
-|---------|-----------|----------|
-| Outbound email, thread last-direction still outbound | 7 days, no inbound after | "Follow up with {name} — no reply to your note" |
-| `meeting` / `video_call` | 14 days, no outbound logged after it | "Send {name} the follow-up from your conversation" |
-| Any outbound, no reply | 30 days | "Reconnect with {name} — gone quiet" |
+| Trigger | Threshold (setting) | Reminder |
+|---------|---------------------|----------|
+| Outbound email, thread last-direction still outbound | `email_no_reply_days` (default 7), no inbound after | "Follow up with {name} — no reply to your note" |
+| `meeting` / `video_call` | `meeting_no_followup_days` (default 14), no outbound logged after it | "Send {name} the follow-up from your conversation" |
+| Any outbound, no reply | `gone_quiet_days` (default 30) | "Reconnect with {name} — gone quiet" |
 
 - Created via the existing reminder path; respects `checkReminderLimits`
   (`MAX_ACTIVE_REMINDERS: 100`, `MAX_DAILY_REMINDERS: 15`); on limit → skip +
@@ -281,6 +312,16 @@ Empty state: "No detected interactions — you're all caught up. New emails and
 meetings with your contacts appear here daily." No realtime; refetch on view
 and after each action.
 
+**Follow-up settings.** A small settings panel (right-slide panel, consistent
+pattern), reached from the Detected card header (e.g. a gear/"Follow-up
+settings" link). Fields: a master enable toggle and three day-count number
+inputs (`email_no_reply_days`, `meeting_no_followup_days`, `gone_quiet_days`)
+with inline labels explaining each ("Remind me to follow up if there's no reply
+to my note after N days"). Client-side validation mirrors the API (integer
+1–365). Persists via a new `GET`/`PUT /api/followup-settings` route pair
+(auth-checked, user-scoped, same pattern as `/api/reminders`). Saving takes
+effect on the next daily sync run.
+
 ## Error Handling
 
 - **Token refresh failure** (revoked/expired): structured log, set
@@ -308,8 +349,13 @@ API responses fixtured.
   contact; updates in place.
 - **Thread collapsing:** multi-message thread → one row, correct
   last-direction and count.
-- **Follow-up rule engine:** each tier fires correctly; self-cancellation on
-  inbound reply; no duplicate auto-reminders; limit-respecting.
+- **Follow-up rule engine:** each tier fires correctly at the configured
+  threshold; custom `followup_settings` values are honored; missing settings
+  row falls back to defaults; `enabled = false` skips creation but
+  self-cancellation still runs; self-cancellation on inbound reply; no
+  duplicate auto-reminders; limit-respecting.
+- **Settings API:** validation rejects out-of-range/non-integer values; PUT is
+  user-scoped and idempotent.
 - **Alias learning:** reassign writes alias; later match resolves via it;
   re-reassign updates not duplicates.
 
