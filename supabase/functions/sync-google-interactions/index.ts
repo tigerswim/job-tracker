@@ -7,7 +7,7 @@ import { buildMatchMap, resolveContact } from './_shared/matching.ts'
 import { detectOpenLoops, shouldSelfCancel } from './_shared/followup-rules.ts'
 import { DEFAULT_FOLLOWUP_SETTINGS } from './_shared/types.ts'
 
-const SUPA_URL = Deno.env.get('NEXT_PUBLIC_SUPABASE_URL')!
+const SUPA_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ENC_KEY = Deno.env.get('GOOGLE_TOKEN_ENC_KEY')!
 const CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID')!
