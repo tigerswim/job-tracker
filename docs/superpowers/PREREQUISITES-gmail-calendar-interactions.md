@@ -364,6 +364,24 @@ Cron (migration 0002) is live: daily 09:00 UTC.
 Remaining: exercise the review UI in-app (confirm/dismiss queued items,
 assign contacts → alias learning), then follow-ups begin accruing.
 
+## ✅ REVIEW FLOW VERIFIED END-TO-END (2026-05-18)
+
+Confirmed in-app: a real Google Calendar meeting → Detected card → assign
+contact + edit notes → Confirm → Interaction correctly written to the
+contact. Full user-facing loop works.
+
+Post-first-run bugs found via UI testing & fixed (all committed):
+- "Invalid Date" on ALL interactions: components parsed date via
+  split('-'), broke on timestamptz ISO format from migration 0001. Fixed
+  with shared tested parseInteractionDate(); regression test added.
+- Confirm silently lost interactions: 0001's PARTIAL unique index can't be
+  used for ON CONFLICT via PostgREST (42P10); confirm endpoint didn't check
+  the error and marked items accepted anyway. Fixed: migration 0004
+  (non-partial index) + confirm endpoint now fails loudly on write error.
+  Same bug had been silently breaking edge-function calendar auto-write.
+
+Migrations applied through 0004. Function redeployed. Cron live (09:00 UTC).
+
 ## Quick checklist
 
 - [ ] P1 — scheduling mechanism + run hour identified
