@@ -282,6 +282,20 @@ SYNC_USER_ID=...                # your auth.users id (see below)
 select id, email from auth.users where email = 'danhoeller@gmail.com';
 ```
 
+> ⚠️ **Running from a git worktree?** `.env.local` is gitignored, so it is
+> **NOT** copied into a worktree when the worktree is created. The OAuth
+> script loads `.env.local` from the package root (via `npm run`, mirroring
+> `scripts/sync-to-obsidian.ts`). If you run `npm run oauth:setup` from a
+> worktree without `.env.local` present there, it fails immediately with
+> `Error: Missing env GOOGLE_CLIENT_ID` even though the file exists in the
+> main checkout. Fix: copy it into the worktree first (the worktree's
+> `.env.local` is also gitignored — verified — so it cannot be committed):
+> ```bash
+> cp /path/to/main/checkout/.env.local /path/to/worktree/.env.local
+> ```
+> The copy lives only as long as the worktree; remove the worktree and it
+> goes with it. Same machine, same gitignore — no broadened exposure.
+
 Then:
 ```bash
 npm run oauth:setup
@@ -291,6 +305,13 @@ gmail.settings.basic. On success it writes an encrypted token row and seeds
 `sync_identity` with your send-as addresses. Verify in Supabase that
 `google_oauth_tokens` has one row and `sync_identity` lists all your email
 addresses (add any missing ones later via the Settings panel built in Phase 6).
+
+If it errors `Missing env GOOGLE_CLIENT_ID`: that variable isn't visible to
+the process. Check, in order: (1) `.env.local` is present in the directory
+`npm run` executes from (worktree caveat above); (2) the key is named exactly
+`GOOGLE_CLIENT_ID` (not `NEXT_PUBLIC_`-prefixed); (3) no spaces around `=` and
+the line isn't commented. Diagnose the name without exposing the value:
+`grep -oE '^[A-Z_]*GOOGLE_CLIENT_ID' .env.local`.
 
 ---
 
