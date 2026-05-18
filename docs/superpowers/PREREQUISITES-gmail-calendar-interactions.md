@@ -329,6 +329,19 @@ until Phase 3 is built.
 
 ---
 
+### ✅ P5b RESOLVED (2026-05-18)
+
+`npm run oauth:setup` completed (from the worktree, after copying `.env.local`
+in and adding `SYNC_USER_ID`). Passed the "unverified app → Advanced →
+proceed" path as project owner (expected, documented). Encrypted token row
+written to `google_oauth_tokens`; `sync_identity` seeded from send-as
+addresses.
+
+All prerequisites P1–P5 resolved. Remaining = deploy steps (not prerequisites):
+Edge Function deploy + secrets, apply `0002` cron migration, first-run smoke.
+
+---
+
 ## Quick checklist
 
 - [ ] P1 — scheduling mechanism + run hour identified
