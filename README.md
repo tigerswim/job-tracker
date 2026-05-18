@@ -21,6 +21,8 @@ A comprehensive job application tracking and contact management system built wit
 
 ### 💬 Interaction System
 - **Communication Logging**: Record emails, phone calls, video calls, LinkedIn messages, meetings, and other interactions
+- **Auto-Sourcing from Gmail & Calendar**: A daily background sync detects emails and meetings with your contacts and surfaces them in a review queue ("Detected" card on the Network tab) for one-tap, edit-before-commit logging — no manual re-keying. Confidently-matched calendar meetings are logged automatically; unknown email addresses can be assigned to a contact and are remembered (learned aliases) for future syncs. *(Single-user; see CLAUDE.md and `docs/superpowers/` for setup and the multi-user roadmap.)*
+- **Automatic Follow-up Reminders**: Open "loops" (a thank-you note with no reply, a networking meeting with no follow-up) generate follow-up reminders on configurable thresholds, and self-cancel automatically when the contact replies.
 - **Detailed Notes**: Resizable text areas for comprehensive interaction documentation
 - **Timeline View**: Chronological view of all contact interactions
 - **Type-Based Organization**: Categorized interaction types with visual indicators

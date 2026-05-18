@@ -195,7 +195,11 @@ follow-up reminders.
   token, encrypts it (AES-256-GCM), seeds `sync_identity`.
 - **Token security**: refresh token is AES-256-GCM encrypted at rest;
   `GOOGLE_TOKEN_ENC_KEY` lives only in the Edge Function secret + local setup
-  env, never in DB/repo. Rotating the key requires re-running setup.
+  env, never in DB/repo. Rotating the key requires re-running setup. The cron
+  job's Supabase anon key is sourced from Supabase Vault secret
+  `sync_cron_anon_key` (not hardcoded in migration SQL) — provision it with
+  `vault.create_secret(...)` before applying `0005` (see that migration's
+  header).
 - **Routing**: Calendar events with a confidently-matched contact auto-write
   as interactions; Gmail (always) and any low/no-confidence go to the review
   queue (Network tab → "Detected" card → edit-before-commit panel).
@@ -214,8 +218,12 @@ follow-up reminders.
   must stay byte-identical (modulo `.ts` import suffixes);
   `scripts/check-vendored-sync.sh` enforces this and runs as part of
   `npm test`.
-- **Migrations**: new convention — timestamped SQL in `supabase/migrations/`
-  (`0001` schema, `0002` cron). Applied via `supabase db push`.
+- **Migrations**: new convention — timestamped SQL in `supabase/migrations/`,
+  applied via `supabase db push`. `0001` schema (+ `interactions.date` widened
+  to timestamptz); `0002` cron (Vault-based anon key); `0003` token columns
+  bytea→text (base64); `0004` interactions upsert index made non-partial
+  (partial indexes can't back `ON CONFLICT` via PostgREST); `0005`
+  reschedules the live cron to read the anon key from Vault.
 - **Tests**: `npm test` (Vitest; runs the vendored-drift check first).
 - **Single-user by design**: the sync runs for one hardcoded `SYNC_USER_ID`;
   other logged-in users see an inert Detected card. Making it multi-user is a
