@@ -294,6 +294,20 @@ addresses (add any missing ones later via the Settings panel built in Phase 6).
 
 ---
 
+### ✅ P5a RESOLVED (2026-05-18)
+
+`supabase db push` applied `0001_auto_interactions_schema.sql` cleanly against
+the remote (migration list showed local 0001 / empty remote slot — the safe
+case; no repair/baseline needed). Verified:
+- 6 new tables present: contact_email_aliases, followup_settings,
+  google_oauth_tokens, interaction_review_queue, sync_identity, sync_runs.
+- interactions.date is now `timestamp with time zone` (the widen fix landed).
+
+P5b (run `npm run oauth:setup`) still pending — the script does not exist
+until Phase 3 is built.
+
+---
+
 ## Quick checklist
 
 - [ ] P1 — scheduling mechanism + run hour identified
