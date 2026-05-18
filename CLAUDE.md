@@ -180,6 +180,52 @@ Sophisticated scheduling system with:
 - Integration with jobs and contacts for contextual reminders
 - Supabase Edge Functions for email processing
 
+### Gmail/Calendar Auto-Sourced Interactions
+Auto-creates interactions from Gmail threads and Calendar events, with a
+confidence-gated review queue, learned email aliases, and self-cancelling
+follow-up reminders.
+
+- **Edge Function** `sync-google-interactions` runs **daily at 09:00 UTC**
+  (`0 9 * * *` = 05:00 ET), scheduled via `pg_cron` + `net.http_post` (same
+  mechanism as `process-email-reminders`; the cron SQL is migration
+  `0002_sync_google_interactions_cron.sql`, run in the Supabase SQL editor).
+- **One-time setup**: `npm run oauth:setup` (interactive; needs
+  `GOOGLE_CLIENT_ID/SECRET`, `GOOGLE_TOKEN_ENC_KEY` 32-byte hex,
+  `SUPABASE_SERVICE_ROLE_KEY`, `SYNC_USER_ID`). Obtains the Google refresh
+  token, encrypts it (AES-256-GCM), seeds `sync_identity`.
+- **Token security**: refresh token is AES-256-GCM encrypted at rest;
+  `GOOGLE_TOKEN_ENC_KEY` lives only in the Edge Function secret + local setup
+  env, never in DB/repo. Rotating the key requires re-running setup.
+- **Routing**: Calendar events with a confidently-matched contact auto-write
+  as interactions; Gmail (always) and any low/no-confidence go to the review
+  queue (Network tab → "Detected" card → edit-before-commit panel).
+- **Identity matching**: `sync_identity` holds the user's own addresses;
+  matching resolves counterparty email → `contacts.email` →
+  `contact_email_aliases` (learned on manual assignment) → review.
+- **Follow-up rule engine**: tiered open-loop detection (no-reply / post-
+  meeting / gone-quiet), thresholds user-editable via the Settings panel
+  (`followup_settings`), with a **separate daily budget**
+  (`max_auto_followups_per_day`) so automation can't starve manual reminders.
+  Auto-followups self-cancel when the contact replies.
+- **Observability**: every run records a `sync_runs` row (counts, watermark,
+  status); the Detected card surfaces last-sync status / failures.
+- **Pure logic** lives in `src/lib/google-sync/` (unit-tested with Vitest)
+  and is **vendored** into the Edge Function's `_shared/` dir. The two copies
+  must stay byte-identical (modulo `.ts` import suffixes);
+  `scripts/check-vendored-sync.sh` enforces this and runs as part of
+  `npm test`.
+- **Migrations**: new convention — timestamped SQL in `supabase/migrations/`
+  (`0001` schema, `0002` cron). Applied via `supabase db push`.
+- **Tests**: `npm test` (Vitest; runs the vendored-drift check first).
+- **Single-user by design**: the sync runs for one hardcoded `SYNC_USER_ID`;
+  other logged-in users see an inert Detected card. Making it multi-user is a
+  scoped follow-up project — see
+  `docs/superpowers/FOLLOWUP-multi-user-gmail-calendar.md`.
+- **Known v1 limitations**: single Google account; self-cancellation has up
+  to one daily-run latency; name-only calendar invites are review-only;
+  nullable `interactions.user_id` (NULLs distinct in the unique index) means a
+  soft-deleted synced row could re-create (not exercised in single-user use).
+
 ### Form Validation & Auto-Formatting
 - **LinkedIn URL auto-prefixing**: Automatically adds `https://` to LinkedIn URLs without protocol
   - Handles n8n-automation workflow compatibility

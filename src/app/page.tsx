@@ -6,6 +6,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { User } from '@supabase/supabase-js'
 import JobList from '@/components/JobList'
 import ContactList from '@/components/ContactList'
+import DetectedInteractionsCard from '@/components/DetectedInteractionsCard'
 import CSVManager from '@/components/CSVManager'
 import Reporting from '@/components/Reporting'
 import LandingPage from '@/components/LandingPageV2'
@@ -243,7 +244,7 @@ export default function Home() {
             {/* Tab Content */}
             <div className="space-y-6">
               {activeTab === 'jobs' && <JobList />}
-              {activeTab === 'contacts' && <ContactList />}
+              {activeTab === 'contacts' && <><DetectedInteractionsCard /><ContactList /></>}
               {activeTab === 'reporting' && <Reporting />}
               {activeTab === 'csv' && <CSVManager />}
             </div>
