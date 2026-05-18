@@ -37,6 +37,32 @@ config, so the existing function is scheduled externally.
 
 **Hand back to Claude:** the mechanism + the chosen run hour.
 
+### ✅ RESOLVED (2026-05-18)
+
+Mechanism: **`pg_cron` + `net.http_post`** to the Edge Function URL with an
+`Authorization: Bearer <anon JWT>` header. Two existing jobs:
+- `process-email-reminders` — `*/5 * * * *` (every 5 min)
+- `cleanup-old-reminders` — `0 2 * * 0` (Sun 02:00 UTC) — daily/weekly style to copy
+
+pg_cron schedules are **UTC**.
+
+**Decided run hour for `sync-google-interactions`: `0 9 * * *`**
+(09:00 UTC = 05:00 EDT / 04:00 EST). Clear of both existing jobs; review queue
+ready each morning Eastern.
+
+**Implementation notes for the plan (Phase 4):**
+- Add a third `cron.job` mirroring the `process-email-reminders` command
+  shape: `net.http_post` to
+  `https://bpaffcxxhkxchyfhyrwg.supabase.co/functions/v1/sync-google-interactions`
+  with the same anon-JWT bearer header, `body := '{}'::jsonb`, schedule
+  `0 9 * * *`, jobname `sync-google-interactions`.
+- The new function is invoked with the **anon JWT**, so it must NOT require
+  user auth. It already operates service-role internally via `SYNC_USER_ID`;
+  just ensure it does not reject the anon bearer caller.
+- The cron-creation SQL is itself a migration-style script the user runs in
+  the Supabase SQL editor (same as the existing jobs were set up); Claude will
+  provide it verbatim in Phase 4.
+
 ---
 
 ## P2 — Confirm live `interactions` (and related) schema
