@@ -342,6 +342,28 @@ Edge Function deploy + secrets, apply `0002` cron migration, first-run smoke.
 
 ---
 
+## ✅ FIRST SUCCESSFUL END-TO-END RUN (2026-05-18)
+
+`curl` invoke → HTTP 200 `{"ok":true,"followups":{"created":0,"cancelled":0}}`.
+`sync_runs`:
+- gmail: success, seen 13, queued 15, skipped 2 (noise floor)
+- gcal: success, seen 4, queued 4, skipped 1941 (all-day/declined/no-external-attendee)
+- items_written 0 (Gmail always → review; the 4 gcal attendees had no contact
+  match yet → review, by design). followups 0 (no accepted history yet).
+
+Bugs fixed during deploy (all committed on branch):
+- shell/paste mechanics (multi-line curl) — operational, not code
+- SUPABASE_URL vs NEXT_PUBLIC_ env name
+- crypto: Node Buffer → Web-standard btoa/atob (Deno has no Buffer)
+- token storage: Buffer→bytea JSON corruption → base64 in text columns
+  (migration 0003 + setup script + edge function, 3 coordinated changes)
+- migration 0003 ordering: delete rows before altering NOT NULL columns
+
+Cron (migration 0002) is live: daily 09:00 UTC.
+
+Remaining: exercise the review UI in-app (confirm/dismiss queued items,
+assign contacts → alias learning), then follow-ups begin accruing.
+
 ## Quick checklist
 
 - [ ] P1 — scheduling mechanism + run hour identified
