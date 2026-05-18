@@ -214,10 +214,14 @@ follow-up reminders.
 - **Migrations**: new convention — timestamped SQL in `supabase/migrations/`
   (`0001` schema, `0002` cron). Applied via `supabase db push`.
 - **Tests**: `npm test` (Vitest; runs the vendored-drift check first).
+- **Single-user by design**: the sync runs for one hardcoded `SYNC_USER_ID`;
+  other logged-in users see an inert Detected card. Making it multi-user is a
+  scoped follow-up project — see
+  `docs/superpowers/FOLLOWUP-multi-user-gmail-calendar.md`.
 - **Known v1 limitations**: single Google account; self-cancellation has up
   to one daily-run latency; name-only calendar invites are review-only;
-  nullable `interactions.user_id` + partial unique index means a soft-deleted
-  synced row could re-create (not exercised in single-user use).
+  nullable `interactions.user_id` (NULLs distinct in the unique index) means a
+  soft-deleted synced row could re-create (not exercised in single-user use).
 
 ### Form Validation & Auto-Formatting
 - **LinkedIn URL auto-prefixing**: Automatically adds `https://` to LinkedIn URLs without protocol
