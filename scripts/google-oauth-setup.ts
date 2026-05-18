@@ -9,8 +9,14 @@
  *   SYNC_USER_ID                              (Dan's auth.users id)
  */
 import * as http from 'node:http'
+import dotenv from 'dotenv'
 import { createClient } from '@supabase/supabase-js'
 import { encryptToken } from '../src/lib/google-sync/crypto'
+
+// Load env from the project's gitignored .env.local. `npm run` always sets
+// CWD to the package root, so this relative path resolves correctly
+// regardless of the user's shell directory. Mirrors scripts/sync-to-obsidian.ts.
+dotenv.config({ path: '.env.local' })
 
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
