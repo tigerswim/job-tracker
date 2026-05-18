@@ -69,10 +69,13 @@ async function main() {
   if (!tok.refresh_token) throw new Error('No refresh_token returned: ' + JSON.stringify(tok))
 
   const { ivB64, ctB64 } = await encryptToken(tok.refresh_token, encKey)
+  // Store the base64 strings directly in text columns. Do NOT wrap in
+  // Buffer: supabase-js serializes a Node Buffer to bytea as JSON
+  // ({"type":"Buffer","data":[...]}), corrupting the round-trip.
   const { error: tErr } = await supa.from('google_oauth_tokens').upsert({
     user_id: userId,
-    refresh_token_encrypted: Buffer.from(ctB64, 'base64'),
-    refresh_token_iv: Buffer.from(ivB64, 'base64'),
+    refresh_token_encrypted: ctB64,
+    refresh_token_iv: ivB64,
     scopes: SCOPES, error_state: null, updated_at: new Date().toISOString(),
   })
   if (tErr) throw tErr
