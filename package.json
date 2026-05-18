@@ -10,8 +10,9 @@
     "export": "next build",
     "dev:server": "next dev",
     "sync:obsidian": "npx tsx scripts/sync-to-obsidian.ts",
-    "test": "vitest run",
+    "test": "bash scripts/check-vendored-sync.sh && vitest run",
     "test:watch": "vitest",
+    "check:vendored": "bash scripts/check-vendored-sync.sh",
     "oauth:setup": "npx tsx scripts/google-oauth-setup.ts"
   },
   "dependencies": {
