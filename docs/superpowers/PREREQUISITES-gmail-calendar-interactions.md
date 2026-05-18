@@ -107,8 +107,36 @@ rows are unaffected by cascade (they use `on delete set null` on
 `suggested_contact_id`) — handled separately as already planned. **No
 migration change required.**
 
-STILL NEEDED: the two `information_schema.columns` outputs for `interactions`
-and `email_reminders` (verifies `add column` names + the unique-index columns).
+### ✅ RESOLVED (2026-05-18)
+
+Column lists captured.
+
+`interactions`: id(uuid,NO), user_id(uuid,**YES**), contact_id(uuid,YES),
+date(**date**,YES), type(text,NO), summary(text,NO), notes(text,YES),
+created_at(timestamptz,YES), updated_at(timestamptz,YES).
+
+`email_reminders`: id, user_id, contact_id, job_id, scheduled_time(tstz),
+user_timezone, email_subject, email_body, user_message, status, created_at,
+sent_at, error_message — all present; confirms Task 13 must populate
+email_subject/email_body/scheduled_time via the existing reminder generator.
+
+**Two findings + the resolution:**
+
+1. **`interactions.date` is type `date` (day-only), sync writes full ISO
+   timestamps.** DECISION (user): alter the column to `timestamptz`.
+   Verified safe — only code usage is `.order('date', ...)` (sort unaffected);
+   no equality/range filters; ContactForm date input coerces fine.
+   **MIGRATION CHANGE APPLIED:** added
+   `alter table interactions alter column date type timestamptz using date::timestamptz;`
+   to `0001_auto_interactions_schema.sql` (commit recorded below).
+
+2. **`interactions.user_id` is nullable.** The partial unique index
+   `(user_id, contact_id, source, external_id)` treats NULL as distinct, so a
+   soft-deleted synced row (user_id→null) could be re-created as a duplicate
+   on next sync. KNOWN EDGE, low severity for single-user (synced rows are not
+   soft-deleted). No migration change; documented as an accepted limitation.
+
+P2 fully resolved. No remaining blockers in P2.
 
 ---
 

@@ -97,6 +97,13 @@ alter table sync_runs enable row level security;
 create policy sync_runs_owner on sync_runs
   for select using (auth.uid() = user_id);
 
+-- interactions: widen `date` to timestamptz so synced Gmail/Calendar
+-- interactions retain time-of-day (existing manual rows coerce to midnight;
+-- only existing usage is ORDER BY date, which is unaffected). Confirmed
+-- against live schema 2026-05-18 (was type `date`).
+alter table interactions
+  alter column date type timestamptz using date::timestamptz;
+
 -- interactions: additive columns + idempotency index
 alter table interactions add column if not exists external_id text;
 alter table interactions add column if not exists source text;
