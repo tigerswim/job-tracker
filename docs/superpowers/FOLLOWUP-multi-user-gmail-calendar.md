@@ -89,12 +89,64 @@ The anon key is the **public, RLS-gated** client key (shipped to browsers),
 not `service_role`, so severity is low. But best practice for any committed
 credential is rotation. **Recommended**, deferred by decision (2026-05-18):
 
-1. Supabase Dashboard → Project Settings → API → rotate the anon key.
-2. Update everywhere it's referenced: frontend env
-   (`NEXT_PUBLIC_SUPABASE_ANON_KEY` / `.env.local` / Netlify env), the Vault
-   secret `sync_cron_anon_key`, and any other consumer.
-3. Redeploy the app; re-apply `0005` (re-reads Vault) so the cron uses the
-   new key.
-4. Resolve the GitGuardian incident.
+### IMPORTANT nuance (discovered 2026-05-18)
+
+Supabase's anon key is a JWT signed by the project's JWT secret. There is no
+isolated "rotate anon key only" — rotating it means **rolling the project
+JWT secret**, which **also invalidates the `service_role` key**. Every
+consumer of *either* key must be updated in a tight window or production
+breaks. This is a whole-project credential rotation.
+
+### Complete consumer inventory (must all be updated)
+
+ANON key consumers:
+- Frontend / app env: `NEXT_PUBLIC_SUPABASE_ANON_KEY` — local `.env.local`
+  AND Netlify environment variables (production).
+- Vault secret `sync_cron_anon_key` (used by the `sync-google-interactions`
+  cron via migration `0005`).
+- **Pre-existing** `process-email-reminders` pg_cron job — hardcoded anon
+  JWT in its `cron.command` (NOT Vault; predates this work). Will break the
+  email reminder system at cutover if not updated.
+
+SERVICE_ROLE key consumers:
+- `.env.local` `SUPABASE_SERVICE_ROLE_KEY` (used by OAuth setup script).
+- Supabase Edge Function secrets: `SUPABASE_SERVICE_ROLE_KEY` (and the
+  separately-stored `SUPABASE_ANON_KEY` secret).
+- Netlify env (if any server-side route uses service role).
+
+Unaffected: `cleanup-old-reminders` cron (pure SQL, no key);
+`.env.local.example` (no real keys).
+
+### Ordered runbook (minimize the broken window)
+
+Do these in order. The app/cron is briefly inconsistent between step 1 and
+the completion of step 4 — run during low traffic.
+
+1. **Roll the JWT secret.** Supabase Dashboard → Project Settings → API →
+   "JWT Settings" → generate new secret. Note: this immediately invalidates
+   old anon AND service_role. Copy the **new** anon key and **new**
+   service_role key from the same page.
+2. **Update Edge Function secrets** (so the deployed sync function keeps
+   working): `supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<new>` and
+   `SUPABASE_ANON_KEY=<new>` (do not paste values in chat — run locally).
+3. **Update the Vault secret** for the sync cron:
+   `select vault.update_secret((select id from vault.secrets where
+   name='sync_cron_anon_key'), '<new anon key>');` then re-apply `0005`
+   (`supabase db push`) so the sync cron job is rebuilt with the new key.
+4. **Fix the pre-existing `process-email-reminders` cron** (it hardcodes
+   the old anon key): reschedule it with the new key. Cleanest: also move it
+   to Vault (`select cron.unschedule('process-email-reminders');` then
+   reschedule reading from a Vault secret, mirroring the 0002/0005 pattern).
+   Minimum viable: reschedule with the new anon JWT inline (but that
+   re-introduces the same hardcoded-secret smell — prefer Vault).
+5. **Update local `.env.local`**: `NEXT_PUBLIC_SUPABASE_ANON_KEY` and
+   `SUPABASE_SERVICE_ROLE_KEY` to the new values.
+6. **Update Netlify env vars** (production frontend): same two vars in the
+   Netlify dashboard → Site settings → Environment variables.
+7. **Redeploy the app** (Netlify) so the frontend ships the new anon key.
+8. **Verify**: app loads/auths; `curl` smoke of the sync function returns
+   200; manually trigger `process-email-reminders` or wait for its 5-min
+   cycle and check `reminder_logs`; check `sync_runs` after a sync.
+9. **Resolve the GitGuardian incident** as remediated + rotated.
 
 Not blocking; tracked here so it isn't lost.
