@@ -171,6 +171,20 @@ export GOOGLE_TOKEN_ENC_KEY=<the 64-hex value>
 **Hand back to Claude:** just confirm "key generated and set as Supabase
 secret" — do not share the value.
 
+### ✅ RESOLVED (2026-05-18)
+
+User confirmed: key generated and set as Supabase Edge Function secret.
+Value not shared (correct — never in chat or git).
+
+**Verification deferred to Phase 4 first run:** correctness of the key
+(exactly 64 hex chars, identical in Supabase secret AND local env for P5b)
+cannot be checked here. The crypto module fails closed on a wrong/short key
+(`hexToBytes` throws if length != 64; GCM decrypt rejects a mismatched key).
+So a bad key surfaces immediately as a loud failure at OAuth setup (P5b) or
+first Edge Function run — never as silent data corruption. If P5b errors with
+a key-length or decrypt error, regenerate per the steps above and re-set both
+places.
+
 ---
 
 ## P4 — Confirm Gmail + Calendar APIs are enabled in Google Cloud
