@@ -235,6 +235,19 @@ P5b consent shows an "unverified app" interstitial, proceed via
 accepted single-user path; recorded here as a known v1 limitation (single
 owner, unverified app, self-consent).
 
+Consent screen "Data access status" showed (2026-05-18): *"Verification is not
+required since your app is not requesting any sensitive or restricted
+scopes."* This reflects scopes **registered on the consent screen**, NOT the
+scopes the setup script requests dynamically at runtime
+(`gmail.readonly` restricted, `calendar.readonly` sensitive). Expected P5b
+behavior: owner self-consent succeeds via the "unverified app → Advanced →
+proceed" path. **Do NOT add these scopes to the consent screen to "fix" this**
+— pre-registering restricted scopes would itself trigger a Google
+verification requirement we currently don't have. Leave as-is; resolves at
+P5b. If P5b instead returns a hard "access blocked / request is invalid",
+report it — fallback is keeping the grant owner-only / re-evaluating scope
+registration.
+
 ---
 
 ## P5 — Apply the migration + run OAuth setup (after Phase 3 builds the script)
