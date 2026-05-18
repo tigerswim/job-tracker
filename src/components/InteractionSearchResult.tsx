@@ -5,6 +5,7 @@ import {
   Mail, Phone, Video, Linkedin, Calendar, MessageSquare, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { InteractionSearchResult as InteractionSearchResultType } from '@/lib/interactions'
+import { parseInteractionDate } from '@/lib/interaction-date'
 
 interface InteractionSearchResultProps {
   result: InteractionSearchResultType
@@ -27,8 +28,7 @@ function formatDate(dateString: string): string {
   const cacheKey = `${today.toDateString()}|${dateString}`
   if (dateFormatCache.has(cacheKey)) return dateFormatCache.get(cacheKey)!
 
-  const [year, month, day] = dateString.split('-').map(Number)
-  const date = new Date(year, month - 1, day)
+  const date = parseInteractionDate(dateString)
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
 
