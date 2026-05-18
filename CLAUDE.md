@@ -59,6 +59,9 @@ Core tables managed via Supabase:
 - **interactions** - Contact communication log
 - **email_reminders** - Scheduled email system with timezone support
 - **job_contacts** - Many-to-many relationship between jobs and contacts
+- **reminder_details** - Extended detail fields for email reminders
+- **reminder_logs** - Audit log of reminder send attempts and outcomes
+- **reminder_processing_status** - Tracks Edge Function processing state for reminders
 
 ### Authentication & Authorization
 - Supabase middleware (`middleware.ts`) handles session refresh
