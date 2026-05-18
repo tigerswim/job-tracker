@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { Interaction } from '@/lib/supabase'
+import { parseInteractionDate } from '@/lib/interaction-date'
 import {
   Mail,
   Phone,
@@ -85,8 +86,7 @@ const formatDate = (dateString: string): string => {
     return dateFormatCache.get(cacheKey)!
   }
 
-  const [year, month, day] = dateString.split('-').map(Number)
-  const date = new Date(year, month - 1, day)
+  const date = parseInteractionDate(dateString)
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
 
