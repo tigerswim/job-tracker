@@ -16,26 +16,9 @@ const RUN_USER = Deno.env.get('SYNC_USER_ID')!
 
 const supa = createClient(SUPA_URL, SERVICE)
 
-function toB64(bytes: Uint8Array): string {
-  let bin = ''
-  for (const b of bytes) bin += String.fromCharCode(b)
-  return btoa(bin)
-}
-
-// PostgREST serializes a Postgres `bytea` column to JSON as a hex string
-// in the form "\x<hexdigits>" (NOT a Uint8Array). Decode it back to bytes.
-function byteaToBytes(v: unknown): Uint8Array {
-  if (v instanceof Uint8Array) return v
-  if (typeof v === 'string') {
-    const hex = v.startsWith('\\x') ? v.slice(2) : v
-    const out = new Uint8Array(hex.length / 2)
-    for (let i = 0; i < out.length; i++) {
-      out[i] = parseInt(hex.substr(i * 2, 2), 16)
-    }
-    return out
-  }
-  throw new Error('unexpected bytea representation: ' + typeof v)
-}
+// refresh_token_encrypted / refresh_token_iv are text columns holding the
+// base64 strings written by the setup script. decryptToken base64-decodes
+// them itself, so they pass straight through — no byte juggling.
 
 async function freshAccessToken(): Promise<string> {
   const { data: row } = await supa.from('google_oauth_tokens')
@@ -45,10 +28,10 @@ async function freshAccessToken(): Promise<string> {
       Date.parse(row.access_expires_at) > Date.now() + 60_000) {
     return row.access_token
   }
-  const ctBytes = byteaToBytes(row.refresh_token_encrypted)
-  const ivBytes = byteaToBytes(row.refresh_token_iv)
   const refresh = await decryptToken(
-    toB64(ctBytes), toB64(ivBytes), ENC_KEY)
+    row.refresh_token_encrypted as string,
+    row.refresh_token_iv as string,
+    ENC_KEY)
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
