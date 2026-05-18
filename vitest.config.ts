@@ -9,5 +9,7 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
-  css: false,
+  // Unit tests run in a node env with no CSS. Override project PostCSS
+  // discovery so Vite does not load postcss.config.mjs (Tailwind 4 plugin).
+  css: { postcss: {} },
 })
