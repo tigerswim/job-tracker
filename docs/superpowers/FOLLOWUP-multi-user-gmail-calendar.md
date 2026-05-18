@@ -70,3 +70,31 @@ Treat as its own spec → plan → implementation cycle (do NOT bolt onto the
 single-user code ad hoc). Google app verification should be started early —
 it is the long external pole and blocks real non-owner usage regardless of
 how fast the code lands.
+
+---
+
+## Security follow-up: rotate the Supabase anon key (recommended, not urgent)
+
+During development the Supabase **anon** JWT was committed in migration
+`0002` (mirrored from the pre-existing `process-email-reminders` cron
+pattern). It was removed from `main` via squash-merge (main history is
+clean) and moved to Supabase Vault (`0002` rewrite + `0005`). However:
+
+- The key still exists in the abandoned feature branch's git history and in
+  GitGuardian's incident record.
+- The same anon key was *already* committed in the pre-existing
+  `process-email-reminders` cron job before this work.
+
+The anon key is the **public, RLS-gated** client key (shipped to browsers),
+not `service_role`, so severity is low. But best practice for any committed
+credential is rotation. **Recommended**, deferred by decision (2026-05-18):
+
+1. Supabase Dashboard → Project Settings → API → rotate the anon key.
+2. Update everywhere it's referenced: frontend env
+   (`NEXT_PUBLIC_SUPABASE_ANON_KEY` / `.env.local` / Netlify env), the Vault
+   secret `sync_cron_anon_key`, and any other consumer.
+3. Redeploy the app; re-apply `0005` (re-reads Vault) so the cron uses the
+   new key.
+4. Resolve the GitGuardian incident.
+
+Not blocking; tracked here so it isn't lost.
