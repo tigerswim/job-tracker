@@ -47,6 +47,11 @@ a lost relationship signal and a follow-up reminder that never gets created.
 | Backfill | History vs forward-only | **Forward-only** from setup date |
 | Review flow | One-tap accept vs edit-before-commit | **Edit-before-commit**: opens in right-slide panel (reuse `InteractionForm`), all fields incl. notes editable before the real interaction is created |
 | Follow-up thresholds | Hardcoded vs user-editable | **User-editable** via a settings UI, persisted in `followup_settings`; spec values are defaults/seeds |
+| Token at rest | Plaintext vs encrypted | **Encrypted at the application layer** (AES-256-GCM, key in Edge Function secret); RLS is not sufficient for a mailbox credential |
+| Identity (whose email is "mine") | Implicit vs explicit | **Explicit configured list** of owned addresses/send-as aliases, seeded at setup; matching depends on it |
+| Auto-followup rate budget | Shared vs separate | **Separate budget** from user-initiated reminders; system-generated followups must not starve manual ones |
+| Sync window | Fixed 2-day vs watermark | **Since last successful sync, with a 2-day floor**; watermark persisted per source |
+| Direction tracking | Parsed from notes vs structured | **Structured columns** on the interaction; `notes` stays free-editable without breaking the rule engine |
 
 ## Architecture
 
@@ -58,8 +63,16 @@ Three cooperating pieces, all reusing existing repo patterns.
 `https://www.googleapis.com/auth/gmail.readonly` and
 `https://www.googleapis.com/auth/calendar.readonly` against Dan's own Google
 Cloud project in "testing" mode (no Google app verification required for the
-project owner). Captures the refresh token and upserts it into
-`google_oauth_tokens` keyed by Dan's `user_id`.
+project owner). Captures the refresh token, **encrypts it** (see Security),
+and upserts the ciphertext into `google_oauth_tokens` keyed by Dan's `user_id`.
+
+The script also prompts for and persists the **owned-identity list** — every
+email address that is "Dan's" for matching purposes: the Gmail account, the
+Kinetic address, and any Gmail send-as aliases (the script can read the latter
+from the Gmail `settings.sendAs` API and pre-fill them for confirmation).
+Stored in `sync_identity` (see Data Model). Matching correctness depends
+entirely on this list being complete, so it is an explicit setup step, not an
+inference.
 
 ### 2. New Edge Function: `sync-google-interactions`
 
@@ -68,11 +81,12 @@ scheduling mechanism (to be confirmed during implementation — the existing
 function has no in-repo cron; whatever schedules it schedules this too). Runs
 daily. Three sequential phases:
 
-- **Phase A — Fetch & match.** Refresh the Google access token from the stored
-  refresh token. Pull the last ~2 days of Gmail threads and Calendar events
-  (2-day overlap window for safety; idempotency makes re-seeing free). For each
-  thread/event, extract counterparty email(s), resolve to a contact, classify
-  confidence.
+- **Phase A — Fetch & match.** Decrypt the refresh token, mint an access token
+  once for the run (reuse the cached one if still valid). Pull Gmail threads
+  and Calendar events **since the last successful sync watermark for that
+  source, with a 2-day floor** (see Sync Window) — fully paginated via
+  `nextPageToken`, no silent truncation. For each thread/event, extract
+  counterparty email(s), resolve to a contact (batched), classify confidence.
 - **Phase B — Write.** High-confidence Calendar → upsert real interaction.
   Gmail (all) and any low/no-confidence → write to review queue.
 - **Phase C — Follow-up rule engine.** Detect open loops, create
@@ -92,12 +106,42 @@ A "Detected" card within the existing **Network** tab with a count badge
 
 ```
 Google APIs
-  → Edge Function (fetch → match → write → rule engine)
-  → Supabase (interactions / interaction_review_queue / email_reminders / contact_email_aliases)
-  → Review UI (Network tab card)
-  → on assign: contact_email_aliases written
+  → Edge Function: decrypt token → fetch (incremental, paginated)
+                  → match (sync_identity + batched contact/alias lookup)
+                  → write (interactions / interaction_review_queue)
+                  → rule engine (email_reminders, separate budget)
+                  → record sync_runs (watermark + counts)
+  → Review UI (Network tab card: status + queue)
+  → on assign: contact_email_aliases written (with conflict warning)
   → next sync resolves more emails automatically
 ```
+
+## Security
+
+This feature holds a long-lived credential to the user's entire mailbox and
+calendar. It is treated as sensitive infrastructure, not application data.
+
+- **Refresh token encryption at rest.** The Google refresh token is encrypted
+  with AES-256-GCM before it ever touches the database. The 256-bit key lives
+  only in an Edge Function secret (`GOOGLE_TOKEN_ENC_KEY`) and the local setup
+  script's environment — never in the DB, never in the repo, never client-side.
+  A per-row random 96-bit IV is stored alongside the ciphertext; the GCM auth
+  tag is appended to the ciphertext. RLS restricts the row to service-role;
+  encryption protects it even against DB dumps, backups, a leaked service-role
+  key, or a SQL-injection path. Decryption happens only inside the Edge
+  Function, transiently, to mint an access token.
+- **Scope minimization.** `gmail.readonly` and `calendar.readonly` only — no
+  send, no modify. The feature can never alter the mailbox.
+- **No raw content retention.** Only derived fields are persisted (subject,
+  snippet, attendee emails, counts). Full message bodies are never stored.
+- **Revocation / kill switch.** A documented procedure: revoke the Google
+  OAuth grant, then delete the `google_oauth_tokens` row. Spec includes an
+  optional purge routine that also clears pending `interaction_review_queue`
+  rows and Google-sourced data on request (single-user today; the seam for a
+  future per-user "disconnect & forget" action).
+- **Key rotation.** Because the IV is per-row and the key is external, rotating
+  `GOOGLE_TOKEN_ENC_KEY` requires re-running the setup script (re-encrypts the
+  one token). Documented; acceptable at single-user scale.
 
 ## Data Model
 
@@ -108,16 +152,60 @@ convention in `CLAUDE.md`.
 ### New table: `google_oauth_tokens`
 
 ```
-user_id            uuid PK references auth.users
-refresh_token      text not null
-access_token       text
-access_expires_at  timestamptz
-scopes             text
-error_state        text          -- set when refresh fails (e.g. 'revoked')
-created_at         timestamptz default now()
-updated_at         timestamptz default now()
+user_id                 uuid PK references auth.users
+refresh_token_encrypted bytea not null   -- AES-256-GCM ciphertext (see Security)
+refresh_token_iv        bytea not null   -- per-row random IV/nonce
+access_token            text             -- short-lived; acceptable in clear (≤1h, refreshable)
+access_expires_at       timestamptz
+scopes                  text
+error_state             text             -- set when refresh fails (e.g. 'revoked')
+created_at              timestamptz default now()
+updated_at              timestamptz default now()
 ```
-RLS: service-role only. Never client-exposed.
+RLS: service-role only, never client-exposed. The refresh token (a long-lived
+bearer credential to the entire mailbox/calendar) is **never stored in
+plaintext** — see Security. The short-lived access token is left in clear: it
+expires within an hour and is independently re-derivable from the encrypted
+refresh token, so it is not a meaningful standalone exposure.
+
+### New table: `sync_identity`
+
+The set of email addresses that are "the user's own" for matching. Without
+this, sent mail is misread as inbound and owned aliases look like contacts.
+
+```
+user_id     uuid not null references auth.users
+email       text not null            -- normalized lowercase, trimmed
+created_at  timestamptz default now()
+PRIMARY KEY (user_id, email)
+```
+RLS by `user_id`. Seeded by the OAuth setup script; editable later via the
+settings panel (so a new send-as alias can be added without re-running setup).
+
+### New table: `sync_runs`
+
+Observability for the daily automation. Without it, silent failure is the
+default failure mode for a job the user depends on.
+
+```
+id              uuid PK default gen_random_uuid()
+user_id         uuid not null
+source          text not null            -- 'gmail' | 'gcal' (one row per source per run)
+started_at      timestamptz not null default now()
+finished_at     timestamptz
+status          text not null            -- 'running' | 'success' | 'partial' | 'failed'
+items_seen      integer default 0
+items_written   integer default 0
+items_queued    integer default 0
+items_skipped   integer default 0
+followups_created   integer default 0
+followups_cancelled integer default 0
+error_message   text
+sync_watermark  timestamptz              -- the high-water timestamp this run advanced to
+```
+RLS by `user_id`. The latest `success` row's `sync_watermark` per source is the
+incremental cursor for the next run (see Sync Window). The Network card reads
+the most recent run to show "Last synced … / N new / ⚠ needs attention".
 
 ### New table: `contact_email_aliases`
 
@@ -130,8 +218,11 @@ source      text not null default 'learned'
 created_at  timestamptz default now()
 UNIQUE (user_id, email)
 ```
-RLS by `user_id`. One alias email maps to exactly one contact; reassign updates
-the existing row rather than duplicating.
+RLS by `user_id`. One alias email maps to exactly one contact. If an email is
+already learned for contact A and the user assigns it to contact B, the row is
+**moved** — but the review UI must first warn ("`x@y.com` is currently linked
+to {A}; assigning to {B} reroutes all future mail from it"), because shared
+addresses (team@, assistants, couples) otherwise silently misroute.
 
 ### New table: `interaction_review_queue`
 
@@ -165,6 +256,7 @@ enabled                       boolean not null default true   -- master on/off f
 email_no_reply_days           integer not null default 7
 meeting_no_followup_days      integer not null default 14
 gone_quiet_days               integer not null default 30
+max_auto_followups_per_day    integer not null default 10      -- separate from manual reminder cap
 updated_at                    timestamptz default now()
 ```
 RLS by `user_id`. The Edge Function reads this row at the start of Phase C; if
@@ -181,8 +273,11 @@ window" de-dup rule).
 ### Altered table: `interactions` (additive, nullable — existing rows untouched)
 
 ```
-+ external_id text null     -- gmail thread id / gcal event (occurrence) id
-+ source      text null     -- 'gmail' | 'gcal' | null (manual entry, unchanged)
++ external_id        text null      -- gmail thread id / gcal event (occurrence) id
++ source             text null      -- 'gmail' | 'gcal' | null (manual entry, unchanged)
++ last_direction     text null      -- 'inbound' | 'outbound' (structured, not parsed from notes)
++ message_count      integer null   -- thread message count (gmail)
++ last_message_at    timestamptz null -- newest message/event time the rule engine reasons on
 UNIQUE partial index (user_id, contact_id, source, external_id)
   WHERE external_id IS NOT NULL
 ```
@@ -190,18 +285,33 @@ The `contact_id` is part of the unique key so one Gmail thread involving two
 contacts can produce one row per contact without colliding. The partial
 predicate keeps existing manual rows (`external_id IS NULL`) out of the index.
 
+`last_direction` / `message_count` / `last_message_at` are **structured
+columns**, not text parsed back out of `notes`. The rule engine reads these
+exclusively, so the user freely editing `notes` in the review flow can never
+corrupt direction detection or self-cancellation. For manual interactions all
+three stay null and the rule engine ignores them (manual rows don't get
+auto-followups). The human-readable summary line in `notes` is still written
+for display, but it is derived output, never an input.
+
 ## Matching & Confidence Logic
+
+"Own address" = any email in `sync_identity` (normalized). All comparisons
+below use that set, never a single hardcoded address.
 
 For each Gmail thread / Calendar event:
 
 **Extract counterparty email(s):**
-- *Gmail*: per message, the address that is not Dan's (From if inbound;
-  To/Cc if outbound). Threads can involve multiple people → produce an
-  interaction per matched contact.
-- *Calendar*: every attendee whose email ≠ Dan's. Organizer-only / no-attendee
-  events → skipped (no counterparty = not a touchpoint).
+- *Gmail*: per message, the address(es) not in `sync_identity` (From if
+  inbound; To/Cc if outbound). Direction = inbound when From ∉ identity set,
+  outbound when From ∈ identity set. Threads can involve multiple people →
+  produce an interaction per matched contact.
+- *Calendar*: every attendee whose email ∉ `sync_identity`. Organizer-only /
+  no-attendee events → skipped (no counterparty = not a touchpoint).
 
-**Resolve email → contact (in order):**
+**Resolve email → contact, batched (in order):**
+Collect all counterparty emails for the whole run first, then resolve with
+**two queries total** (one `contacts` IN-list, one `contact_email_aliases`
+IN-list) into an in-memory map — not a query per item.
 1. Exact match on `contacts.email` (normalized lowercase, trimmed).
 2. Exact match on `contact_email_aliases.email`.
 3. No match → unresolved.
@@ -226,20 +336,59 @@ Dan's address appears only in Bcc, or sender matches a conservative denylist
 present). Anything uncertain still goes to review — the denylist is
 conservative and never silently drops ambiguous mail.
 
+**Calendar noise floor (skipped entirely, not even queued):**
+- Events the user **declined** or marked **tentative** (responseStatus).
+- Events the user did not attend per `responseStatus` where they are an
+  attendee (not organizer) and never accepted.
+- **All-day events** (OOO, holidays, focus blocks) — not a conversation.
+- Events with **no non-identity attendee** after identity filtering.
+
+**Recurring-event collapsing (the calendar analogue of thread collapsing):**
+A recurring series (e.g. a weekly 1:1) is **one living interaction per series
+per contact**, keyed on the recurring-event id — not one row per occurrence.
+`last_message_at` advances to the most recent past occurrence; `message_count`
+counts occurrences that have happened. Eighty weekly 1:1s = one interaction
+that says "recurring — 80 occurrences, last 2026-05-15", not eighty rows. A
+single (non-recurring) event remains one interaction keyed on its event id.
+
 **Accepted trade-off:** a calendar invite with only a name (no email) cannot be
 auto-matched (name matching too unreliable). It becomes a review item assigned
 by hand once; if that person's calendar email is later learned as an alias via
 a Gmail match, future events auto-resolve.
+
+## Sync Window & Pagination
+
+The sync is **incremental with a safety floor**, not a fixed lookback:
+
+- Per source, the cursor is the `sync_watermark` of the latest `success`
+  `sync_runs` row. Each run queries from `min(watermark, now − 2 days)` — the
+  2-day floor absorbs clock skew and late-delivered mail; the watermark
+  prevents a **permanent data gap** when a run is missed (e.g. Edge Function
+  down for 3 days → next run still covers the gap, not just 2 days).
+- First ever run (no prior success row): start from the setup timestamp
+  (forward-only; no historical backfill, per Non-Goals).
+- Gmail uses `q=after:<epoch>` + full `nextPageToken` pagination; Calendar uses
+  `timeMin`/`updatedMin` + `pageToken`. A per-run hard cap (e.g. 2000 items)
+  guards against a pathological run; hitting it marks the run `partial` and
+  does **not** advance the watermark past the unprocessed point, so the
+  remainder is picked up next run rather than lost.
+- The watermark advances only on `success`/`partial`-up-to-point; a `failed`
+  run leaves it untouched so the next run safely re-covers the window
+  (idempotency makes re-processing a no-op).
 
 ## Thread Collapsing & Idempotent Upsert
 
 **Gmail — one living interaction per thread per contact:**
 - Key: `(user_id, contact_id, 'gmail', thread_id)`.
 - First matched message → create: `type:'email'`, `date` = message date,
-  `summary` = thread subject, `notes` = `"Email thread — N message(s), last:
-  <inbound|outbound>, <date>\n\n<latest snippet>"`.
-- Subsequent syncs → update in place: bump `date` to newest message, rewrite
-  count/last-direction line, refresh snippet. Subject preserved.
+  structured columns set (`last_direction`, `message_count`,
+  `last_message_at`), `summary` = thread subject, `notes` = derived display
+  line + latest snippet.
+- Subsequent syncs → update in place: advance structured columns, bump `date`,
+  refresh the derived `notes` display line + snippet. Subject preserved.
+- Gmail fetch uses `format=metadata` (headers only) for direction/threading on
+  all messages; the body snippet is pulled only for the latest message that is
+  actually written — minimizing API quota and runtime.
 
 **Calendar — one interaction per event/occurrence per contact:**
 - Key: `(user_id, contact_id, 'gcal', event_or_occurrence_id)`.
@@ -258,8 +407,11 @@ At the start of Phase C, read the user's `followup_settings` row (fall back to
 coded defaults if absent). If `enabled = false`, skip creation entirely
 (self-cancellation of existing pending auto-reminders still runs).
 
-"Direction": from the last-direction recorded in `notes` for Gmail. Calendar
-`meeting`/`video_call` = outbound-equivalent (ball in Dan's court).
+"Direction" is read from the structured `last_direction` column (never parsed
+from `notes`, which the user may have edited). Calendar `meeting`/`video_call`
+= outbound-equivalent (ball in the user's court). The engine only scans
+interactions within `max(thresholds)` days of now, so the query is bounded and
+indexable on `(user_id, last_message_at)`.
 
 **Open-loop detection (creates reminders).** Thresholds below are the seeded
 defaults; the live values come from `followup_settings`:
@@ -270,9 +422,14 @@ defaults; the live values come from `followup_settings`:
 | `meeting` / `video_call` | `meeting_no_followup_days` (default 14), no outbound logged after it | "Send {name} the follow-up from your conversation" |
 | Any outbound, no reply | `gone_quiet_days` (default 30) | "Reconnect with {name} — gone quiet" |
 
-- Created via the existing reminder path; respects `checkReminderLimits`
-  (`MAX_ACTIVE_REMINDERS: 100`, `MAX_DAILY_REMINDERS: 15`); on limit → skip +
-  log, never throw.
+- Created via the existing reminder path. Auto-followups draw on a **separate
+  daily budget** (`followup_settings.max_auto_followups_per_day`, default 10),
+  counted independently from user-initiated reminders, so automation can never
+  consume the manual `MAX_DAILY_REMINDERS` allowance and lock the user out of
+  creating their own reminders. The shared `MAX_ACTIVE_REMINDERS: 100` cap
+  still applies as a global safety ceiling. On any limit → skip, record the
+  skipped count on the `sync_runs` row (surfaced in the Network card), never
+  throw, never silent.
 - Tagged `source: 'auto_followup'`; stores the triggering interaction id.
 - Skip if an `auto_followup` reminder already exists for that contact within
   the same open window. Tiers escalate one loop; they do not stack into three
@@ -289,9 +446,16 @@ fired email. Also cancels if contact deleted or trigger interaction removed.
 Card within the **Network** tab, count badge (*Detected · N*). Forward-only,
 so the queue starts empty and grows with activity.
 
+A status line at the top of the card reads from the latest `sync_runs` row:
+"Last synced 2h ago · 3 new" or, on failure, "⚠ Sync needs attention —
+reauthorize Google" (links to the documented re-setup step). This makes silent
+failure visible.
+
 **Edit-before-commit flow:** tapping a queue item opens it in the existing
-right-slide panel, reusing `InteractionForm` seeded with detected values. All
-fields editable before any real interaction is written:
+right-slide panel. This **extends** `InteractionForm` (which today has no
+contact picker and no alias concept) with a searchable contact picker and the
+detected-value seeding — flagged so the plan does not under-scope the UI work.
+All fields editable before any real interaction is written:
 - **Contact** — suggested (or empty); changeable via searchable picker backed
   by existing `searchContacts` (server-side `ilike`).
 - **Type** — pre-filled; changeable to any of the 6 enum values.
@@ -305,22 +469,29 @@ Actions:
   `contact_email_aliases` (auto-learn).
 - **Dismiss** → mark `dismissed`; write nothing; learn nothing; never
   resurfaces.
-- **Bulk:** "Accept all suggested" (commit detected values unchanged) and
-  "Dismiss all" for backlog clearing. Secondary to the open-and-edit default.
+- **Bulk:** "Dismiss all", and "Accept all suggested" — the latter restricted
+  to items that have a `suggested_contact_id` (never blind-accepts no-match
+  items) and gated behind a confirm step, since it deliberately bypasses the
+  edit-before-commit safety. Secondary to the open-and-edit default.
 
 Empty state: "No detected interactions — you're all caught up. New emails and
 meetings with your contacts appear here daily." No realtime; refetch on view
 and after each action.
 
-**Follow-up settings.** A small settings panel (right-slide panel, consistent
-pattern), reached from the Detected card header (e.g. a gear/"Follow-up
-settings" link). Fields: a master enable toggle and three day-count number
-inputs (`email_no_reply_days`, `meeting_no_followup_days`, `gone_quiet_days`)
-with inline labels explaining each ("Remind me to follow up if there's no reply
-to my note after N days"). Client-side validation mirrors the API (integer
-1–365). Persists via a new `GET`/`PUT /api/followup-settings` route pair
-(auth-checked, user-scoped, same pattern as `/api/reminders`). Saving takes
-effect on the next daily sync run.
+**Settings panel.** A right-slide panel (consistent pattern) from the Detected
+card header. Two groups:
+- *Follow-ups:* master enable toggle; three day-count inputs
+  (`email_no_reply_days`, `meeting_no_followup_days`, `gone_quiet_days`) with
+  explanatory labels; the per-day auto-followup budget
+  (`max_auto_followups_per_day`). Validation mirrors API + DB (integer 1–365;
+  budget 0–50). Persists via `GET`/`PUT /api/followup-settings`
+  (auth-checked, user-scoped, `/api/reminders` pattern).
+- *My email addresses:* the `sync_identity` list — add/remove owned addresses
+  and send-as aliases without re-running the setup script. Persists via
+  `GET`/`PUT /api/sync-identity`. A clear warning explains that a missing
+  address here causes the user's own mail to be misclassified.
+
+Saving takes effect on the next daily sync run.
 
 ## Error Handling
 
@@ -334,7 +505,25 @@ effect on the next daily sync run.
 - **Reminder limits hit:** follow-up creation degrades gracefully (skip +
   log), matching the existing reminder path. Never throws.
 - **Time:** all comparisons in UTC; reminders created via the existing path
-  which already handles `user_timezone`.
+  which already handles `user_timezone`. The daily run hour is pinned
+  deliberately (not 00:00 UTC, which splits the user's evening) — chosen at
+  scheduling time and documented.
+- **Contact deletion:** `contact_email_aliases` cascade-deletes (FK). Pending
+  `interaction_review_queue` rows for that contact have `suggested_contact_id`
+  nulled and are additionally **auto-dismissed** (not left dangling with a
+  counterparty email pointing at a deleted person). Auto-written interactions
+  follow the table's existing contact-deletion behavior (confirmed against
+  live schema — see Open Items); pending `auto_followup` reminders for the
+  contact self-cancel on the next run (already specified).
+
+## Known v1 Limitations (accepted, documented)
+
+- **Self-cancellation latency:** a follow-up can fire in the morning for a
+  reply received overnight, because cancellation runs on the next daily sync.
+  Accepted; the alternative (real-time) is an explicit Non-Goal.
+- **Name-only calendar invites** are never auto-matched (review-only once).
+- **Encryption key rotation** requires re-running the setup script.
+- Single Google account per user (no multi-account inbox aggregation in v1).
 
 ## Testing
 
@@ -357,11 +546,34 @@ API responses fixtured.
 - **Settings API:** validation rejects out-of-range/non-integer values; PUT is
   user-scoped and idempotent.
 - **Alias learning:** reassign writes alias; later match resolves via it;
-  re-reassign updates not duplicates.
+  re-reassign moves (not duplicates) and triggers the conflict warning.
+- **Token encryption:** round-trip encrypt→store→decrypt yields the original;
+  wrong key fails closed (no plaintext fallback); tampered ciphertext fails
+  GCM auth.
+- **Identity matching:** sent mail from an owned alias classifies as outbound;
+  mail from an alias is never treated as a contact; missing-identity behavior.
+- **Sync window:** missed-run gap is covered (watermark, not fixed 2 days);
+  pagination exhausts `nextPageToken`; per-run cap → `partial`, watermark not
+  over-advanced; failed run leaves watermark untouched.
+- **Calendar:** declined/tentative/all-day skipped; recurring series collapses
+  to one interaction with correct occurrence count.
+- **Budget isolation:** auto-followups exhausting their budget do not block
+  manual reminder creation.
 
-## Open Items for Implementation
+## Open Items for Implementation (hard prerequisites for the plan)
 
-- Confirm the exact mechanism scheduling `process-email-reminders` and reuse it
-  verbatim for `sync-google-interactions` (no second scheduling system).
-- Confirm `interactions` table column names against live Supabase schema before
-  writing the migration.
+These must be resolved before/at the start of implementation — they are
+blocking, not optional confirmations:
+
+1. Confirm the exact mechanism scheduling `process-email-reminders` (pg_cron /
+   Supabase scheduled trigger / external) and reuse it verbatim for
+   `sync-google-interactions`, including the pinned run hour. No second
+   scheduling system.
+2. Confirm live `interactions` schema: column names, and especially the
+   on-delete behavior of its `contact_id` FK (drives the contact-deletion
+   handling above).
+3. Confirm where the AES key (`GOOGLE_TOKEN_ENC_KEY`) is provisioned — Supabase
+   Edge Function secret + local script env — and the exact GCM encoding
+   (IV‖ciphertext‖tag layout) so script and Edge Function interoperate.
+4. Confirm Gmail API quota headroom for the account at expected volume with the
+   `metadata`-then-snippet fetch strategy.
