@@ -6,13 +6,12 @@
 -- no bytea wire-format dependency.
 --
 -- Existing rows hold the corrupted JSON-Buffer representation and cannot be
--- salvaged; they are cleared so `npm run oauth:setup` re-populates cleanly.
+-- salvaged. Delete them FIRST (the columns are NOT NULL, so the type change
+-- must run against an empty table), then convert the now-empty columns.
+-- NOT NULL is intentionally preserved: a token row without a token is invalid.
+
+delete from google_oauth_tokens;
 
 alter table google_oauth_tokens
-  alter column refresh_token_encrypted type text
-    using null,
-  alter column refresh_token_iv type text
-    using null;
-
--- Force a fresh OAuth setup run (old ciphertext was unrecoverable anyway).
-delete from google_oauth_tokens;
+  alter column refresh_token_encrypted type text using refresh_token_encrypted::text,
+  alter column refresh_token_iv type text using refresh_token_iv::text;
