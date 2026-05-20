@@ -109,15 +109,16 @@ async function upsertReviewQueue(n: any, contactId: string | null) {
   await supa.from('interaction_review_queue').upsert({
     user_id: RUN_USER, source: n.source, external_id: n.externalId,
     suggested_contact_id: contactId, counterparty_email: n.counterpartyEmail,
-    type: n.type, occurred_at: n.occurredAt, summary: n.summary,
-    notes: n.notes, status: 'pending',
+    type: n.type, occurred_at: n.lastMessageAt ?? n.occurredAt,
+    summary: n.summary, notes: n.notes, status: 'pending',
   }, { onConflict: 'user_id,source,external_id' })
 }
 
 async function upsertInteraction(n: any, contactId: string) {
   await supa.from('interactions').upsert({
     user_id: RUN_USER, contact_id: contactId, source: n.source,
-    external_id: n.externalId, type: n.type, date: n.occurredAt,
+    external_id: n.externalId, type: n.type,
+    date: n.lastMessageAt ?? n.occurredAt,
     summary: n.summary, notes: n.notes, last_direction: n.lastDirection,
     message_count: n.messageCount, last_message_at: n.lastMessageAt,
   }, { onConflict: 'user_id,contact_id,source,external_id' })
