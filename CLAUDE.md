@@ -213,6 +213,32 @@ follow-up reminders.
   Auto-followups self-cancel when the contact replies.
 - **Observability**: every run records a `sync_runs` row (counts, watermark,
   status); the Detected card surfaces last-sync status / failures.
+- **Cron scheduling gotcha**: migrations `0002` and `0005` both silently skip
+  scheduling if the Vault secret `sync_cron_anon_key` is missing at run time
+  (they emit a `NOTICE` and return). **If the cron job is missing** (symptom:
+  no `sync_runs` rows after 09:00 UTC, but manual invocation works), verify
+  and re-schedule via the SQL editor:
+  ```sql
+  -- 1. Confirm secret exists (must return a row):
+  select name from vault.decrypted_secrets where name = 'sync_cron_anon_key';
+
+  -- 2. If missing, provision it first:
+  -- select vault.create_secret('<NEXT_PUBLIC_SUPABASE_ANON_KEY value>', 'sync_cron_anon_key', 'Anon key for sync-google-interactions pg_cron job');
+
+  -- 3. Re-schedule:
+  do $$
+  declare anon_key text;
+  begin
+    select decrypted_secret into anon_key from vault.decrypted_secrets where name = 'sync_cron_anon_key';
+    perform cron.unschedule('sync-google-interactions');
+    perform cron.schedule('sync-google-interactions', '0 9 * * *',
+      format($job$select net.http_post(url:='https://bpaffcxxhkxchyfhyrwg.supabase.co/functions/v1/sync-google-interactions',headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer %s'),body:='{}'::jsonb) as request_id;$job$, anon_key));
+    raise notice 'Scheduled';
+  end $$;
+
+  -- 4. Verify (must show active = true):
+  select jobname, schedule, active from cron.job where jobname = 'sync-google-interactions';
+  ```
 - **Pure logic** lives in `src/lib/google-sync/` (unit-tested with Vitest)
   and is **vendored** into the Edge Function's `_shared/` dir. The two copies
   must stay byte-identical (modulo `.ts` import suffixes);
@@ -224,6 +250,11 @@ follow-up reminders.
   bytea→text (base64); `0004` interactions upsert index made non-partial
   (partial indexes can't back `ON CONFLICT` via PostgREST); `0005`
   reschedules the live cron to read the anon key from Vault.
+  **Important**: `0002` and `0005` silently skip cron scheduling if the Vault
+  secret is absent — they emit a NOTICE and succeed, leaving no cron job. The
+  Vault secret must be provisioned **before** applying these migrations; if
+  applied out of order, re-run the scheduling SQL manually (see Cron scheduling
+  gotcha above).
 - **Tests**: `npm test` (Vitest; runs the vendored-drift check first).
 - **Single-user by design**: the sync runs for one hardcoded `SYNC_USER_ID`;
   other logged-in users see an inert Detected card. Making it multi-user is a
