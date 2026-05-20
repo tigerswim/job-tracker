@@ -3,11 +3,16 @@ import { normalizeThread, isNoiseSender } from '../gmail'
 
 const identity = new Set(['me@gmail.com'])
 
+// base64url of "Great to hear from you!"
+const encodedBody = btoa('Great to hear from you!').replace(/\+/g, '-').replace(/\//g, '_')
+
 const thread = {
   id: 'thr1',
   messages: [
-    { headers: { From: 'me@gmail.com', To: 'them@x.com', Subject: 'Hi', Date: '2026-05-01T10:00:00Z' }, snippet: 's1' },
-    { headers: { From: 'them@x.com', To: 'me@gmail.com', Subject: 'Re: Hi', Date: '2026-05-03T10:00:00Z' }, snippet: 's2' },
+    { headers: { From: 'me@gmail.com', To: 'them@x.com', Subject: 'Hi', Date: '2026-05-01T10:00:00Z' },
+      payload: { mimeType: 'text/plain', body: { data: btoa('Hello there').replace(/\+/g, '-').replace(/\//g, '_') } } },
+    { headers: { From: 'them@x.com', To: 'me@gmail.com', Subject: 'Re: Hi', Date: '2026-05-03T10:00:00Z' },
+      payload: { mimeType: 'text/plain', body: { data: encodedBody } } },
   ],
 }
 
@@ -21,6 +26,7 @@ describe('gmail', () => {
     expect(out[0].lastMessageAt).toBe('2026-05-03T10:00:00.000Z')
     expect(out[0].externalId).toBe('thr1')
     expect(out[0].type).toBe('email')
+    expect(out[0].notes).toContain('Great to hear from you!')
   })
   it('flags no-reply senders', () => {
     expect(isNoiseSender('no-reply@x.com')).toBe(true)
