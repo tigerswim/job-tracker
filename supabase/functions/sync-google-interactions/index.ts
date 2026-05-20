@@ -132,7 +132,7 @@ function adaptGmailThread(full: any) {
       return { headers: {
         From: h.From ?? '', To: h.To, Cc: h.Cc,
         Subject: h.Subject, Date: h.Date ?? new Date().toISOString(),
-      }, snippet: m.snippet ?? '' }
+      }, payload: m.payload }
     }),
   }
 }
@@ -150,7 +150,7 @@ async function syncGmail(token: string, ctx: Awaited<ReturnType<typeof loadConte
         (pageToken ? `&pageToken=${pageToken}` : ''), token)
       for (const t of list.threads ?? []) {
         const full = await gJson(
-          `https://gmail.googleapis.com/gmail/v1/users/me/threads/${t.id}?format=metadata`, token)
+          `https://gmail.googleapis.com/gmail/v1/users/me/threads/${t.id}?format=full`, token)
         const thread = adaptGmailThread(full)
         const norm = normalizeThread(thread, ctx.identity)
         if (norm.length === 0) { skipped++; continue }

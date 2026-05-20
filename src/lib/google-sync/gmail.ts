@@ -2,16 +2,30 @@ import { normalizeEmail, isOwn, classifyDirection } from './identity'
 import type { NormalizedInteraction } from './types'
 
 const NOISE = /(^|[._-])(no-?reply|noreply|notifications?|donotreply)@/i
+const BODY_TRUNCATE = 800
 
 export function isNoiseSender(from: string): boolean {
   return NOISE.test(normalizeEmail(from))
 }
 
+interface RawPart { mimeType: string; body?: { data?: string }; parts?: RawPart[] }
 interface RawMsg {
   headers: { From: string; To?: string; Cc?: string; Subject?: string; Date: string }
-  snippet: string
+  payload?: RawPart
 }
 interface RawThread { id: string; messages: RawMsg[] }
+
+function extractPlainText(part: RawPart): string {
+  if (part.mimeType === 'text/plain' && part.body?.data) {
+    const decoded = atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'))
+    return decoded.slice(0, BODY_TRUNCATE)
+  }
+  for (const child of part.parts ?? []) {
+    const text = extractPlainText(child)
+    if (text) return text
+  }
+  return ''
+}
 
 function parseAddrs(v?: string): string[] {
   if (!v) return []
@@ -49,7 +63,7 @@ export function normalizeThread(
     type: 'email' as const,
     occurredAt: new Date(sorted[0].headers.Date).toISOString(),
     summary: subject,
-    notes: `Email thread — ${sorted.length} message(s), last: ${lastDir}, ${lastAt}\n\n${last.snippet}`,
+    notes: `Email thread — ${sorted.length} message(s), last: ${lastDir}, ${lastAt}\n\n${last.payload ? extractPlainText(last.payload) : ''}`.trimEnd(),
     lastDirection: lastDir,
     messageCount: sorted.length,
     lastMessageAt: lastAt,

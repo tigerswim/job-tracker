@@ -6,6 +6,7 @@ import { SyncSettingsPanel } from './SyncSettingsPanel'
 interface QueueItem {
   id: string; source: string; summary: string; counterparty_email: string | null
   type: string; occurred_at: string; notes: string; suggested_contact_id: string | null
+  suggested_contact_name: string | null
 }
 
 export default function DetectedInteractionsCard() {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 interface Props {
   item: { id: string; type: string; summary: string; notes: string
     occurred_at: string; counterparty_email: string | null
-    suggested_contact_id: string | null }
+    suggested_contact_id: string | null; suggested_contact_name: string | null }
   onClose: () => void
   onDone: () => void
 }
@@ -16,7 +16,7 @@ export function ReviewItemPanel({ item, onClose, onDone }: Props) {
   const [date, setDate] = useState(item.occurred_at.slice(0, 10))
   const [summary, setSummary] = useState(item.summary)
   const [notes, setNotes] = useState(item.notes)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(item.suggested_contact_name ?? '')
   const [results, setResults] = useState<ContactLite[]>([])
 
   useEffect(() => {
