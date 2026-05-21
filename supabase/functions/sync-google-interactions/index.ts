@@ -106,12 +106,14 @@ async function watermark(source: string): Promise<Date> {
 }
 
 async function upsertReviewQueue(n: any, contactId: string | null) {
+  // Insert-only: never overwrite an existing row's status. If the user
+  // dismissed or accepted this item, leave it alone on subsequent syncs.
   await supa.from('interaction_review_queue').upsert({
     user_id: RUN_USER, source: n.source, external_id: n.externalId,
     suggested_contact_id: contactId, counterparty_email: n.counterpartyEmail,
     type: n.type, occurred_at: n.lastMessageAt ?? n.occurredAt,
     summary: n.summary, notes: n.notes, status: 'pending',
-  }, { onConflict: 'user_id,source,external_id' })
+  }, { onConflict: 'user_id,source,external_id', ignoreDuplicates: true })
 }
 
 async function upsertInteraction(n: any, contactId: string) {
