@@ -213,28 +213,34 @@ follow-up reminders.
   Auto-followups self-cancel when the contact replies.
 - **Observability**: every run records a `sync_runs` row (counts, watermark,
   status); the Detected card surfaces last-sync status / failures.
-- **Cron scheduling gotcha**: migrations `0002` and `0005` both silently skip
-  scheduling if the Vault secret `sync_cron_anon_key` is missing at run time
-  (they emit a `NOTICE` and return). **If the cron job is missing** (symptom:
-  no `sync_runs` rows after 09:00 UTC, but manual invocation works), verify
-  and re-schedule via the SQL editor:
-  ```sql
-  -- 1. Confirm secret exists (must return a row):
-  select name from vault.decrypted_secrets where name = 'sync_cron_anon_key';
+- **Cron scheduling gotcha** (self-healing as of migration `0006`): the
+  `sync-google-interactions` cron job has gone silently missing in the past —
+  symptom: no `sync_runs` rows near 09:00 UTC, but manual invocation works.
+  **Diagnose by checking `cron.job` first, not the Vault secret** — the job
+  can be absent even when the secret is present (that was the actual 2026-05-22
+  root cause). Two historical bugs caused it: (1) migrations `0002`/`0005`
+  silently skipped scheduling on a missing Vault secret; (2) more subtly,
+  `cron.unschedule()` *raises an exception* if the job doesn't exist, so the
+  unschedule-then-schedule block in `0005` aborted entirely if it ran while no
+  job was present — leaving no job. Migration `0006` fixes both: it installs
+  `public.ensure_sync_google_cron()` (idempotent, guarded unschedule, raises
+  loudly on a missing secret) plus a monthly watchdog cron
+  (`sync-google-cron-watchdog`, `0 8 1 * *`) that re-asserts the daily job, so
+  a missing job now self-repairs within ~1 month.
 
-  -- 2. If missing, provision it first:
+  **If the daily job is still missing**, repair from the SQL editor:
+  ```sql
+  -- 1. Check the job directly (this is the real diagnostic):
+  select jobname, schedule, active from cron.job
+  where jobname in ('sync-google-interactions', 'sync-google-cron-watchdog');
+
+  -- 2. Confirm the Vault secret exists (ensure_sync_google_cron needs it):
+  select name from vault.decrypted_secrets where name = 'sync_cron_anon_key';
+  --    If missing, provision it (paste the anon key directly in the editor):
   -- select vault.create_secret('<NEXT_PUBLIC_SUPABASE_ANON_KEY value>', 'sync_cron_anon_key', 'Anon key for sync-google-interactions pg_cron job');
 
-  -- 3. Re-schedule:
-  do $$
-  declare anon_key text;
-  begin
-    select decrypted_secret into anon_key from vault.decrypted_secrets where name = 'sync_cron_anon_key';
-    perform cron.unschedule('sync-google-interactions');
-    perform cron.schedule('sync-google-interactions', '0 9 * * *',
-      format($job$select net.http_post(url:='https://bpaffcxxhkxchyfhyrwg.supabase.co/functions/v1/sync-google-interactions',headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer %s'),body:='{}'::jsonb) as request_id;$job$, anon_key));
-    raise notice 'Scheduled';
-  end $$;
+  -- 3. Re-assert the schedule (idempotent — safe to run anytime):
+  select public.ensure_sync_google_cron();
 
   -- 4. Verify (must show active = true):
   select jobname, schedule, active from cron.job where jobname = 'sync-google-interactions';
@@ -249,12 +255,15 @@ follow-up reminders.
   to timestamptz); `0002` cron (Vault-based anon key); `0003` token columns
   bytea→text (base64); `0004` interactions upsert index made non-partial
   (partial indexes can't back `ON CONFLICT` via PostgREST); `0005`
-  reschedules the live cron to read the anon key from Vault.
+  reschedules the live cron to read the anon key from Vault; `0006` makes cron
+  scheduling self-healing — adds `public.ensure_sync_google_cron()` (idempotent,
+  guarded unschedule, fails loudly on a missing secret) and a monthly watchdog
+  cron that re-asserts the daily job.
   **Important**: `0002` and `0005` silently skip cron scheduling if the Vault
-  secret is absent — they emit a NOTICE and succeed, leaving no cron job. The
-  Vault secret must be provisioned **before** applying these migrations; if
-  applied out of order, re-run the scheduling SQL manually (see Cron scheduling
-  gotcha above).
+  secret is absent (and `0005`'s unguarded `cron.unschedule` aborts if no job
+  exists). The Vault secret must be provisioned **before** applying these
+  migrations. `0006` supersedes this fragility — if cron is ever missing, run
+  `select public.ensure_sync_google_cron();` (see Cron scheduling gotcha above).
 - **Tests**: `npm test` (Vitest; runs the vendored-drift check first).
 - **Single-user by design**: the sync runs for one hardcoded `SYNC_USER_ID`;
   other logged-in users see an inert Detected card. Making it multi-user is a
