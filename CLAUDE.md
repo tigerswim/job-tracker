@@ -213,22 +213,49 @@ follow-up reminders.
   Auto-followups self-cancel when the contact replies.
 - **Observability**: every run records a `sync_runs` row (counts, watermark,
   status); the Detected card surfaces last-sync status / failures.
-- **Cron scheduling gotcha** (self-healing as of migration `0006`): the
-  `sync-google-interactions` cron job has gone silently missing in the past —
-  symptom: no `sync_runs` rows near 09:00 UTC, but manual invocation works.
-  **Diagnose by checking `cron.job` first, not the Vault secret** — the job
-  can be absent even when the secret is present (that was the actual 2026-05-22
-  root cause). Two historical bugs caused it: (1) migrations `0002`/`0005`
-  silently skipped scheduling on a missing Vault secret; (2) more subtly,
-  `cron.unschedule()` *raises an exception* if the job doesn't exist, so the
-  unschedule-then-schedule block in `0005` aborted entirely if it ran while no
-  job was present — leaving no job. Migration `0006` fixes both: it installs
-  `public.ensure_sync_google_cron()` (idempotent, guarded unschedule, raises
-  loudly on a missing secret) plus a monthly watchdog cron
-  (`sync-google-cron-watchdog`, `0 8 1 * *`) that re-asserts the daily job, so
-  a missing job now self-repairs within ~1 month.
+- **Cron scheduling gotcha** (self-healing as of migration `0006`, hardened
+  in `0007`): the `sync-google-interactions` cron has silently failed three
+  distinct ways. Symptoms always look identical from the outside — no fresh
+  `sync_runs` rows near 09:00 UTC — so the **diagnostic order matters**.
+  `cron.job_run_details.status = 'succeeded'` is **not** proof the sync ran;
+  it only means `net.http_post()` returned a row id. The actual HTTP response
+  lands in `net._http_response`. Always check there.
 
-  **If the daily job is still missing**, repair from the SQL editor:
+  **Diagnostic order (fastest-to-truth):**
+  1. `select * from sync_runs order by started_at desc limit 5;` — confirms
+     no rows at the expected schedule time.
+  2. `select jobname, schedule, active from cron.job where jobname like 'sync-google%';`
+     — confirms the job exists. If it doesn't → see "missing job" recovery
+     below.
+  3. **Do not trust `cron.job_run_details`.** Go straight to
+     `net._http_response`:
+     ```sql
+     select id, status_code, timed_out, error_msg, left(content, 400), created
+     from net._http_response
+     where created > now() - interval '3 days'
+     order by id desc;
+     ```
+     Filter to the relevant hour if there's noise from other crons.
+  4. Interpret:
+     - `status_code = 401, content = 'UNAUTHORIZED_INVALID_JWT_FORMAT'` →
+       Vault secret has whitespace or bad value. Check with
+       `select length(decrypted_secret), (decrypted_secret ~ '\s') as ws
+        from vault.decrypted_secrets where name = 'sync_cron_anon_key';`.
+       `0007` rejects this at schedule time, but a manually-pasted secret can
+       still slip in if scheduling is done without `ensure_sync_google_cron()`.
+     - `timed_out / error_msg = 'Timeout of 5000 ms reached'` → cron command
+       was scheduled without `timeout_milliseconds := 60000`. The default 5s
+       is shorter than a real sync (8–12s). `0007` bakes 60s into the
+       command; re-run `select public.ensure_sync_google_cron();`.
+     - **Job missing entirely** (no row in `cron.job`) → the 2026-05-22
+       failure mode. Caused by `0002`/`0005` silently skipping on missing
+       Vault secret, plus `cron.unschedule()` *raising* when the job is
+       absent, which aborted the unschedule-then-schedule block in `0005`
+       entirely. `0006` fixes both with a guarded unschedule and a monthly
+       watchdog cron (`sync-google-cron-watchdog`, `0 8 1 * *`) that
+       re-asserts the daily job, so a missing job self-repairs within ~1 month.
+
+  **If the daily job is missing or any of the above is wrong**, repair from the SQL editor:
   ```sql
   -- 1. Check the job directly (this is the real diagnostic):
   select jobname, schedule, active from cron.job
@@ -258,12 +285,18 @@ follow-up reminders.
   reschedules the live cron to read the anon key from Vault; `0006` makes cron
   scheduling self-healing — adds `public.ensure_sync_google_cron()` (idempotent,
   guarded unschedule, fails loudly on a missing secret) and a monthly watchdog
-  cron that re-asserts the daily job.
+  cron that re-asserts the daily job; `0007` hardens the function against the
+  two silent failures observed on 2026-05-26 — trims the Vault secret on read,
+  rejects non-JWT-shaped values at schedule time, and bakes
+  `timeout_milliseconds := 60000` into the cron command (default 5s was
+  shorter than a real sync, so the HTTP client disconnected mid-run and no
+  `sync_runs` row was written).
   **Important**: `0002` and `0005` silently skip cron scheduling if the Vault
   secret is absent (and `0005`'s unguarded `cron.unschedule` aborts if no job
   exists). The Vault secret must be provisioned **before** applying these
-  migrations. `0006` supersedes this fragility — if cron is ever missing, run
-  `select public.ensure_sync_google_cron();` (see Cron scheduling gotcha above).
+  migrations. `0006`+`0007` supersede this fragility — if cron is ever
+  missing or misbehaving, run `select public.ensure_sync_google_cron();`
+  (see Cron scheduling gotcha above).
 - **Tests**: `npm test` (Vitest; runs the vendored-drift check first).
 - **Single-user by design**: the sync runs for one hardcoded `SYNC_USER_ID`;
   other logged-in users see an inert Detected card. Making it multi-user is a
