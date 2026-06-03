@@ -326,7 +326,7 @@ const UploadResultsDisplay = ({ uploadResults }: { uploadResults: {[key: string]
       icon: MessageCircle,
       color: 'purple',
       downloadFn: downloadInteractionsCSV,
-      fields: ['contact_id', 'type (email/phone/video_call/linkedin/meeting/other)', 'date', 'summary', 'notes', 'user_id', 'created_at', 'updated_at']
+      fields: ['contact_id', 'type (email/phone/video_call/linkedin/meeting/other)', 'date', 'summary', 'notes', 'external_id', 'source', 'last_direction', 'message_count', 'last_message_at', 'user_id', 'created_at', 'updated_at']
     }
   ]
 
