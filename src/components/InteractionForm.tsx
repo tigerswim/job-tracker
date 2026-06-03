@@ -150,7 +150,7 @@ export default function InteractionForm({ contactId, interaction, onSuccess, onC
   // Initialize form data with default values
   const [formData, setFormData] = useState(() => ({
     type: interaction?.type || 'email' as const,
-    date: interaction?.date || new Date().toISOString().split('T')[0],
+    date: interaction?.date ? interaction.date.split('T')[0] : new Date().toISOString().split('T')[0],
     summary: interaction?.summary || '',
     notes: interaction?.notes || ''
   }))
