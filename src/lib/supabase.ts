@@ -70,6 +70,11 @@ export interface Interaction {
   date: string
   summary: string
   notes?: string
+  external_id?: string
+  source?: string
+  last_direction?: string
+  message_count?: number
+  last_message_at?: string
   user_id: string
   created_at: string
   updated_at: string

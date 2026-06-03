@@ -2,7 +2,7 @@
 import { Job, Contact, Interaction } from './supabase'
 import { fetchJobs } from './jobs'
 import { getContacts } from './contacts'
-import { getInteractions } from './interactions'
+import { getAllInteractions } from './interactions'
 import { supabase } from './supabase'
 
 // Date field mappings for different data types - Updated to match actual database schema
@@ -245,9 +245,11 @@ export async function downloadContactsCSV() {
 }
 
 export async function downloadInteractionsCSV() {
-  const interactions = await getInteractions()
+  const interactions = await getAllInteractions()
   const csvContent = convertToCSV(interactions, [
-    'id', 'contact_id', 'type', 'date', 'summary', 'notes', 'user_id', 'created_at', 'updated_at'
+    'id', 'contact_id', 'type', 'date', 'summary', 'notes',
+    'external_id', 'source', 'last_direction', 'message_count', 'last_message_at',
+    'user_id', 'created_at', 'updated_at'
   ])
   downloadCSV(csvContent, 'interactions.csv')
 }

@@ -333,6 +333,30 @@ export async function deleteInteractions(ids: string[]): Promise<boolean> {
 }
 
 // Get recent interactions across all contacts (for dashboard)
+export async function getAllInteractions(): Promise<Interaction[]> {
+  try {
+    const supabase = createClientComponentClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
+    const { data, error } = await supabase
+      .from('interactions')
+      .select('id, contact_id, type, date, summary, notes, external_id, source, last_direction, message_count, last_message_at, user_id, created_at, updated_at')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching all interactions:', error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Exception in getAllInteractions:', error)
+    return []
+  }
+}
+
 export async function getRecentInteractions(limit: number = 10): Promise<Interaction[]> {
   try {
     const supabase = createClientComponentClient()
