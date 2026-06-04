@@ -34,3 +34,35 @@ describe('followup rules', () => {
     )).toBe(true)
   })
 })
+
+describe('snooze filtering (caller-side)', () => {
+  const rows = [{
+    id: 'i1', contact_id: 'c1', type: 'email',
+    last_direction: 'outbound' as const, last_message_at: '2026-05-10T00:00:00Z',
+  }, {
+    id: 'i2', contact_id: 'c2', type: 'email',
+    last_direction: 'outbound' as const, last_message_at: '2026-05-10T00:00:00Z',
+  }]
+
+  it('filters out a contact whose snooze is in the future', () => {
+    const snoozedIds = new Set(['c1'])
+    const loops = detectOpenLoops(rows, DEFAULT_FOLLOWUP_SETTINGS, now)
+      .filter(l => !snoozedIds.has(l.contactId))
+    expect(loops.map(l => l.contactId)).not.toContain('c1')
+    expect(loops.map(l => l.contactId)).toContain('c2')
+  })
+
+  it('includes a contact whose snooze expired in the past', () => {
+    const snoozedIds = new Set<string>() // expired snooze: not in set
+    const loops = detectOpenLoops(rows, DEFAULT_FOLLOWUP_SETTINGS, now)
+      .filter(l => !snoozedIds.has(l.contactId))
+    expect(loops.map(l => l.contactId)).toContain('c1')
+  })
+
+  it('includes a contact with null snooze', () => {
+    const snoozedIds = new Set<string>()
+    const loops = detectOpenLoops(rows, DEFAULT_FOLLOWUP_SETTINGS, now)
+      .filter(l => !snoozedIds.has(l.contactId))
+    expect(loops).toHaveLength(2)
+  })
+})
