@@ -27,6 +27,7 @@ export interface Contact {
   user_id: string
   created_at: string
   updated_at: string
+  followup_snoozed_until?: string | null
 }
 
 export interface ExperienceEntry {

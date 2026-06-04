@@ -61,7 +61,7 @@ export async function getContactsLite(): Promise<Pick<Contact,
 
     const { data, error } = await supabase
       .from('contacts')
-      .select('id,name,company,job_title,email,phone,current_location,linkedin_url,notes,mutual_connections,experience,education,created_at,updated_at,user_id')
+      .select('id,name,company,job_title,email,phone,current_location,linkedin_url,notes,mutual_connections,experience,education,created_at,updated_at,user_id,followup_snoozed_until')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(5000)
@@ -97,7 +97,7 @@ export async function searchContacts(options: ContactSearchOptions = {}): Promis
 
     let query = supabase
       .from('contacts')
-      .select('id,name,company,job_title,email,phone,current_location,linkedin_url,notes,mutual_connections,experience,education,created_at,updated_at,user_id', { count: 'exact' })
+      .select('id,name,company,job_title,email,phone,current_location,linkedin_url,notes,mutual_connections,experience,education,created_at,updated_at,user_id,followup_snoozed_until', { count: 'exact' })
       .eq('user_id', user.id)
 
     if (searchTerm.trim()) {
@@ -138,7 +138,7 @@ export async function getContactsBatch(offset: number = 0, limit: number = 50): 
 
     const { data, error, count } = await supabase
       .from('contacts')
-      .select('id,name,company,job_title,email,phone,current_location,linkedin_url,notes,mutual_connections,experience,education,created_at,updated_at,user_id', { count: 'exact' })
+      .select('id,name,company,job_title,email,phone,current_location,linkedin_url,notes,mutual_connections,experience,education,created_at,updated_at,user_id,followup_snoozed_until', { count: 'exact' })
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)

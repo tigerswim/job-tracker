@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('contacts')
     .select(
-      'id,name,company,job_title,email,phone,current_location,linkedin_url,notes,mutual_connections,experience,education,created_at',
+      'id,name,company,job_title,email,phone,current_location,linkedin_url,notes,mutual_connections,experience,education,created_at,updated_at,user_id,followup_snoozed_until',
       { count: 'exact' },
     )
     .eq('user_id', user.id)
