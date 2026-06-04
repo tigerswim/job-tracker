@@ -54,7 +54,7 @@ src/
 
 ### Database Schema
 Core tables managed via Supabase:
-- **contacts** - Professional network contacts with experience/education JSON fields
+- **contacts** - Professional network contacts with experience/education JSON fields; `followup_snoozed_until timestamptz` controls auto-followup suppression
 - **jobs** - Job applications with status tracking ('interested' | 'applied' | 'interviewing' | 'onhold' | 'offered' | 'rejected')
 - **interactions** - Contact communication log
 - **email_reminders** - Scheduled email system with timezone support
@@ -151,6 +151,24 @@ Modal components implementing this pattern:
 - Use `getContactById(id)` → `setEditingContact()` → `setShowForm(true)` — do NOT try to select a contact in the grid
 - `displayedContactsCount` starts at 20 (paginated); contacts beyond the first page won't be highlighted/visible if selected via `setSelectedContactId`
 - On mobile, interactions bottom sheet requires `setShowMobileInteractions(true)` separately from `setSelectedContactId`
+
+### ContactModal — Known Gap
+`ContactModal` (in `ContactList.tsx`) has full snooze UI (Clock button + dropdown + amber badge) but `setModalContact()` is never called anywhere — the modal is currently unreachable from the UI. This is pre-existing dead code, not a snooze regression. To expose the modal, wire a contact card click to call `setModalContact(contact)`.
+
+### Contact Follow-up Snooze
+Per-contact snooze for auto-followup reminders. Controlled by `followup_snoozed_until timestamptz` on `contacts`.
+
+- **Migration**: `supabase/migrations/0008_contact_followup_snooze.sql` — adds column + partial index on `(user_id, followup_snoozed_until) WHERE followup_snoozed_until IS NOT NULL`
+- **Edge Function filter**: `runFollowups()` in `sync-google-interactions/index.ts` fetches contacts where `followup_snoozed_until > now()` and excludes them from `detectOpenLoops` results before creating reminders
+- **Snooze links in emails**: auto-followup emails include HMAC-signed links for 1w / 1m / 3m / indefinite snooze durations; clicking updates the contact without requiring a login
+- **HMAC utility**: `src/lib/snooze-hmac.ts` — `generateSnoozeToken`, `validateSnoozeToken`, `snoozeUntil`; uses Web Crypto API (works in Node 18+, Deno, browser)
+- **Snooze link route**: `src/app/api/contacts/[id]/snooze/route.ts` — HMAC-validated GET handler; uses service role key for DB update; HTML-escapes all output + sets `Content-Security-Policy: default-src 'none'`
+- **UI**: `ContactModal` in `ContactList.tsx` — Clock icon button in header opens dropdown; amber badge shows active snooze with "Clear" link; optimistic local state update
+- **Required env vars**:
+  - `SNOOZE_LINK_SECRET` — 32-byte hex (`openssl rand -hex 32`); must match in `.env.local`, Netlify env vars, and Supabase Edge Function secrets
+  - `SUPABASE_SERVICE_ROLE_KEY` — in `.env.local` and Netlify env vars
+  - `APP_URL` — in Supabase Edge Function secrets; set to `https://job-tracker.kineticbrandpartners.com` (the code falls back to this value but won't use the fallback if the secret is set to a wrong value)
+- **Durations**: `1w` (+7 days), `1m` (+1 month), `3m` (+3 months), `indefinite` (year 2099 sentinel)
 
 ## Development Patterns
 
@@ -290,7 +308,8 @@ follow-up reminders.
   rejects non-JWT-shaped values at schedule time, and bakes
   `timeout_milliseconds := 60000` into the cron command (default 5s was
   shorter than a real sync, so the HTTP client disconnected mid-run and no
-  `sync_runs` row was written).
+  `sync_runs` row was written); `0008` adds `followup_snoozed_until timestamptz`
+  to `contacts` with a partial index for the snooze filter query.
   **Important**: `0002` and `0005` silently skip cron scheduling if the Vault
   secret is absent (and `0005`'s unguarded `cron.unschedule` aborts if no job
   exists). The Vault secret must be provisioned **before** applying these
@@ -394,8 +413,13 @@ Then check the parent chain for any stable `data-*` attributes or IDs to target.
   - `animate-scale-in` - Scale in effect
 
 ## Testing & Quality
-Currently no automated testing setup. When adding tests:
-- Consider Vitest for unit testing (Next.js compatible)
-- Playwright for E2E testing
-- Mock Supabase client for component tests
-- Test database operations with test data
+- **Test runner**: Vitest (`npm test`) — runs vendored-drift check first, then all unit tests
+- **Test files**: `src/lib/google-sync/__tests__/` — covers followup rules, HMAC snooze tokens, identity matching, crypto, calendar/gmail sync, settings validation
+- **39 tests** as of 2026-06-04
+
+### PostgREST Filter Injection — API Route Pattern
+When building `.or()` filter strings with user input, always strip metacharacters first:
+```typescript
+const safe = term.replace(/[,()"\\*%]/g, '')
+```
+Never interpolate raw user input into `.or()` filter strings — commas, parens, and quotes can escape the filter and inject arbitrary PostgREST conditions. Use `.in()` for exact-match multi-value lookups instead of `.or()` string building.
