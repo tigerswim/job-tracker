@@ -228,6 +228,14 @@ async function runFollowups() {
   }
   if (!settings.enabled) return { created: 0, cancelled }
 
+  // Fetch currently-snoozed contact IDs so we don't create reminders for them
+  const now = new Date()
+  const { data: snoozedContacts } = await supa.from('contacts')
+    .select('id')
+    .eq('user_id', RUN_USER)
+    .gt('followup_snoozed_until', now.toISOString())
+  const snoozedIds = new Set((snoozedContacts ?? []).map((r: { id: string }) => r.id))
+
   const horizon = new Date(Date.now() -
     Math.max(settings.email_no_reply_days, settings.meeting_no_followup_days,
              settings.gone_quiet_days) * 86_400_000).toISOString()
@@ -235,7 +243,8 @@ async function runFollowups() {
     .select('id,contact_id,type,last_direction,last_message_at')
     .eq('user_id', RUN_USER).not('external_id', 'is', null)
     .gte('last_message_at', horizon)
-  const loops = detectOpenLoops(rows ?? [], settings, new Date())
+  const loops = detectOpenLoops(rows ?? [], settings, now)
+    .filter(l => !snoozedIds.has(l.contactId))
 
   const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0)
   const { count: todayCount } = await supa.from('email_reminders')
