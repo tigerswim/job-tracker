@@ -17,6 +17,11 @@ export async function POST(req: Request,
     .select('*').eq('id', id).eq('user_id', user.id).single()
   if (!q) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
+  // Verify contact_id belongs to the authenticated user before writing
+  const { data: ownedContact } = await supa.from('contacts')
+    .select('id').eq('id', body.contact_id).eq('user_id', user.id).single()
+  if (!ownedContact) return NextResponse.json({ error: 'invalid contact' }, { status: 400 })
+
   // Create the real interaction FIRST and verify it succeeded. If this
   // fails we must NOT mark the queue item accepted (that silently loses the
   // interaction — the bug this replaces).

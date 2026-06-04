@@ -95,14 +95,17 @@ export async function GET(request: NextRequest) {
     }
 
     if (searchTerm) {
-      query = query.or(`
-        email_subject.ilike.%${searchTerm}%,
-        user_message.ilike.%${searchTerm}%,
-        contacts.name.ilike.%${searchTerm}%,
-        contacts.company.ilike.%${searchTerm}%,
-        jobs.job_title.ilike.%${searchTerm}%,
-        jobs.company.ilike.%${searchTerm}%
-      `);
+      const safeTerm = searchTerm.replace(/[,()"\\*%]/g, '')
+      if (safeTerm) {
+        query = query.or(`
+          email_subject.ilike.%${safeTerm}%,
+          user_message.ilike.%${safeTerm}%,
+          contacts.name.ilike.%${safeTerm}%,
+          contacts.company.ilike.%${safeTerm}%,
+          jobs.job_title.ilike.%${safeTerm}%,
+          jobs.company.ilike.%${safeTerm}%
+        `);
+      }
     }
 
     // Apply sorting

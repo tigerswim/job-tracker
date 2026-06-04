@@ -90,7 +90,8 @@ export async function POST(request: NextRequest) {
       const { data: linkedInMatch } = await supabase
         .from('contacts')
         .select('*')
-        .or(`linkedin_url.eq."${formattedLinkedInUrl}",linkedin_url.eq."${urlWithSlash}"`)
+        .in('linkedin_url', [formattedLinkedInUrl, urlWithSlash])
+        .eq('user_id', process.env.N8N_DEFAULT_USER_ID ?? '')
         .limit(1)
 
       if (linkedInMatch && linkedInMatch.length > 0) {

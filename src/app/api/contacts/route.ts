@@ -27,10 +27,12 @@ export async function GET(request: NextRequest) {
     .eq('user_id', user.id)
 
   if (searchTerm.trim()) {
-    const term = searchTerm.trim()
-    query = query.or(
-      `name.ilike.%${term}%,company.ilike.%${term}%,job_title.ilike.%${term}%,email.ilike.%${term}%,current_location.ilike.%${term}%,notes.ilike.%${term}%`,
-    )
+    const term = searchTerm.trim().replace(/[,()"\\*%]/g, '')
+    if (term) {
+      query = query.or(
+        `name.ilike.%${term}%,company.ilike.%${term}%,job_title.ilike.%${term}%,email.ilike.%${term}%,current_location.ilike.%${term}%,notes.ilike.%${term}%`,
+      )
+    }
   }
 
   query = query.order('created_at', { ascending: false })
