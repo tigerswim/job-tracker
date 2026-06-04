@@ -49,7 +49,7 @@ export async function getContacts(): Promise<Contact[]> {
 }
 
 export async function getContactsLite(): Promise<Pick<Contact,
-  'id' | 'name' | 'company' | 'job_title' | 'email' | 'phone' | 'current_location' | 'linkedin_url' | 'notes' | 'mutual_connections' | 'experience' | 'education' | 'created_at' | 'updated_at' | 'user_id'
+  'id' | 'name' | 'company' | 'job_title' | 'email' | 'phone' | 'current_location' | 'linkedin_url' | 'notes' | 'mutual_connections' | 'experience' | 'education' | 'created_at' | 'updated_at' | 'user_id' | 'followup_snoozed_until'
 >[]> {
   try {
     const supabase = createClientComponentClient()
