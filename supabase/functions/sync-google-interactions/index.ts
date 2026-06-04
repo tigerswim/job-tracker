@@ -20,6 +20,27 @@ const supa = createClient(SUPA_URL, SERVICE)
 // base64 strings written by the setup script. decryptToken base64-decodes
 // them itself, so they pass straight through — no byte juggling.
 
+async function buildSnoozeLinks(
+  contactId: string, userId: string, appUrl: string, secret: string
+): Promise<Record<string, string>> {
+  const enc = new TextEncoder()
+  async function hmac(duration: string): Promise<string> {
+    const keyBytes = new Uint8Array(secret.match(/.{2}/g)!.map((b: string) => parseInt(b, 16)))
+    const key = await crypto.subtle.importKey(
+      'raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    )
+    const sig = await crypto.subtle.sign('HMAC', key, enc.encode(`${contactId}:${duration}:${userId}`))
+    return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')
+  }
+  const durations = ['1w', '1m', '3m', 'indefinite'] as const
+  const links: Record<string, string> = {}
+  for (const d of durations) {
+    const token = await hmac(d)
+    links[d] = `${appUrl}/api/contacts/${contactId}/snooze?duration=${d}&uid=${userId}&token=${token}`
+  }
+  return links
+}
+
 async function freshAccessToken(): Promise<string> {
   const { data: row } = await supa.from('google_oauth_tokens')
     .select('*').eq('user_id', RUN_USER).single()
@@ -205,6 +226,9 @@ async function syncCalendar(token: string, ctx: Awaited<ReturnType<typeof loadCo
 }
 
 async function runFollowups() {
+  const snoozeSecret = Deno.env.get('SNOOZE_LINK_SECRET') ?? ''
+  const appUrl = Deno.env.get('APP_URL') ?? 'https://job-tracker.kineticbrandpartners.com'
+
   const { data: settingsRow } = await supa.from('followup_settings')
     .select('*').eq('user_id', RUN_USER).single()
   const settings = settingsRow ?? DEFAULT_FOLLOWUP_SETTINGS
@@ -269,12 +293,28 @@ async function runFollowups() {
     }
     const subject = tierMsg[loop.tier] ?? `Follow up with ${name}`
     const scheduled = new Date(Date.now() + 5 * 60_000).toISOString()
+
+    const snoozeLinks = snoozeSecret
+      ? await buildSnoozeLinks(loop.contactId, RUN_USER, appUrl, snoozeSecret)
+      : null
+
+    const emailBody = snoozeLinks
+      ? `<p>${subject}</p>
+<p style="margin-top:16px;font-size:14px;color:#555;">Snooze follow-up reminders for this contact:</p>
+<p>
+  <a href="${snoozeLinks['1w']}" style="margin-right:12px;color:#2563eb;">1 week</a>
+  <a href="${snoozeLinks['1m']}" style="margin-right:12px;color:#2563eb;">1 month</a>
+  <a href="${snoozeLinks['3m']}" style="margin-right:12px;color:#2563eb;">3 months</a>
+  <a href="${snoozeLinks['indefinite']}" style="color:#2563eb;">Indefinitely</a>
+</p>`
+      : subject
+
     await supa.from('email_reminders').insert({
       user_id: RUN_USER, contact_id: loop.contactId, source: 'auto_followup',
       trigger_interaction_id: loop.interactionId, status: 'pending',
       scheduled_time: scheduled, user_timezone: 'America/New_York',
       email_subject: subject,
-      email_body: subject,
+      email_body: emailBody,
       user_message: subject,
     })
     budget--; created++
