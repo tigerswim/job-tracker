@@ -4,7 +4,8 @@
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Contact } from '@/lib/supabase'
-import { getContactsLite, getContactById, deleteContact, searchContacts } from '@/lib/contacts'
+import { getContactsLite, getContactById, deleteContact, searchContacts, updateContact } from '@/lib/contacts'
+import { snoozeUntil, SnoozeDuration } from '@/lib/snooze-hmac'
 import { getJobsForContacts } from '@/lib/jobContacts'
 import {
   Plus,
@@ -27,7 +28,8 @@ import {
   ExternalLink,
   ChevronUp,
   ChevronDown,
-  Bell
+  Bell,
+  Clock
 } from 'lucide-react'
 import ContactForm from './ContactForm'
 import ContactJobLinks from './ContactJobLinks'
@@ -391,6 +393,30 @@ const ContactModal = memo(({ contact, onClose, onEdit }: ContactModalProps) => {
     return `${recentEducation.degree_and_field}, ${recentEducation.institution}`
   }, [])
 
+  const [showSnoozeMenu, setShowSnoozeMenu] = useState(false)
+  const [snoozeLoading, setSnoozeLoading] = useState(false)
+  const [localSnoozedUntil, setLocalSnoozedUntil] = useState<string | null>(
+    contact.followup_snoozed_until ?? null
+  )
+
+  const isSnoozed = localSnoozedUntil && new Date(localSnoozedUntil) > new Date()
+
+  async function applySnooze(duration: SnoozeDuration) {
+    setSnoozeLoading(true)
+    setShowSnoozeMenu(false)
+    const until = snoozeUntil(duration)
+    await updateContact(contact.id, { followup_snoozed_until: until.toISOString() })
+    setLocalSnoozedUntil(until.toISOString())
+    setSnoozeLoading(false)
+  }
+
+  async function clearSnooze() {
+    setSnoozeLoading(true)
+    await updateContact(contact.id, { followup_snoozed_until: null })
+    setLocalSnoozedUntil(null)
+    setSnoozeLoading(false)
+  }
+
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
       {/* Backdrop - subtle, semi-transparent */}
@@ -421,6 +447,33 @@ const ContactModal = memo(({ contact, onClose, onEdit }: ContactModalProps) => {
               >
                 <Edit className="w-3 h-3" />
               </button>
+              {/* Snooze button */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowSnoozeMenu(v => !v)}
+                  disabled={snoozeLoading}
+                  className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200"
+                  title="Snooze follow-up reminders"
+                >
+                  <Clock className="w-3 h-3" />
+                </button>
+                {showSnoozeMenu && (
+                  <div className="absolute right-0 top-8 bg-white text-slate-800 rounded-lg shadow-lg border border-slate-200 z-10 min-w-[160px]">
+                    <div className="px-3 py-2 text-xs font-semibold text-slate-500 border-b border-slate-100">
+                      Snooze follow-ups
+                    </div>
+                    {(['1w', '1m', '3m', 'indefinite'] as const).map(d => (
+                      <button
+                        key={d}
+                        onClick={() => applySnooze(d)}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50"
+                      >
+                        {({ '1w': '1 week', '1m': '1 month', '3m': '3 months', 'indefinite': 'Indefinitely' } as Record<string, string>)[d]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={onClose}
                 className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200"
@@ -434,6 +487,23 @@ const ContactModal = memo(({ contact, onClose, onEdit }: ContactModalProps) => {
         {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
           <div className="space-y-4">
+            {/* Snooze status badge */}
+            {isSnoozed && (
+              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
+                <span className="text-amber-800">
+                  Follow-ups snoozed until{' '}
+                  {new Date(localSnoozedUntil!).getFullYear() >= 2099
+                    ? 'further notice'
+                    : new Date(localSnoozedUntil!).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+                <button
+                  onClick={clearSnooze}
+                  className="text-amber-600 hover:text-amber-800 text-xs underline ml-2"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
             {/* Current Role */}
             {(contact.job_title && contact.company) || formatExperience(contact) ? (
               <div>
