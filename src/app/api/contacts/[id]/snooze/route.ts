@@ -11,13 +11,27 @@ const DURATION_LABEL: Record<SnoozeDuration, string> = {
   'indefinite': 'indefinitely',
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function htmlPage(title: string, body: string): NextResponse {
+  const safeTitle = escapeHtml(title)
+  const safeBody = escapeHtml(body)
   return new NextResponse(
-    `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
+    `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${safeTitle}</title>
      <style>body{font-family:system-ui,sans-serif;max-width:480px;margin:80px auto;padding:0 16px;text-align:center}
      h1{font-size:1.4rem}p{color:#555}</style></head>
-     <body><h1>${title}</h1><p>${body}</p></body></html>`,
-    { headers: { 'Content-Type': 'text/html' } }
+     <body><h1>${safeTitle}</h1><p>${safeBody}</p></body></html>`,
+    { headers: {
+      'Content-Type': 'text/html',
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'",
+    }}
   )
 }
 
@@ -83,6 +97,6 @@ export async function GET(
   const name = contact.name as string
   return htmlPage(
     'Follow-up snoozed',
-    `Got it — follow-up reminders for <strong>${name}</strong> are snoozed for ${label}.`
+    `Got it — follow-up reminders for "${name}" are snoozed for ${label}.`
   )
 }
