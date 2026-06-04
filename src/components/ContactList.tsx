@@ -405,8 +405,8 @@ const ContactModal = memo(({ contact, onClose, onEdit }: ContactModalProps) => {
     setSnoozeLoading(true)
     setShowSnoozeMenu(false)
     const until = snoozeUntil(duration)
-    await updateContact(contact.id, { followup_snoozed_until: until.toISOString() })
     setLocalSnoozedUntil(until.toISOString())
+    await updateContact(contact.id, { followup_snoozed_until: until.toISOString() })
     setSnoozeLoading(false)
   }
 
