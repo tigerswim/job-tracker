@@ -167,17 +167,18 @@ const ResizableTextArea = ({
 }
 
 // Memoized Contact Card Component
-const ContactCard = memo(({ 
-  contact, 
-  index, 
-  isSelected, 
-  contactIdToJobs, 
-  contactNameMap, 
-  onClick, 
-  onEdit, 
+const ContactCard = memo(({
+  contact,
+  index,
+  isSelected,
+  contactIdToJobs,
+  contactNameMap,
+  onClick,
+  onEdit,
   onDelete,
   onMutualConnectionClick,
-  onCreateReminder
+  onCreateReminder,
+  onSnooze
 }: {
   contact: Contact
   index: number
@@ -189,6 +190,7 @@ const ContactCard = memo(({
   onDelete: (id: string) => void
   onMutualConnectionClick: (connectionName: string) => void
   onCreateReminder: (contact: Contact) => void
+  onSnooze: (contact: Contact) => void
 }) => {
   const formatExperience = useCallback((contact: Contact) => {
     if (!contact.experience || contact.experience.length === 0) return null
@@ -243,6 +245,20 @@ const ContactCard = memo(({
             title="Create reminder"
           >
             <Bell className="w-3 h-3" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onSnooze(contact)
+            }}
+            className={`p-1 rounded transition-all duration-200 ${
+              contact.followup_snoozed_until && new Date(contact.followup_snoozed_until) > new Date()
+                ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
+                : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50'
+            }`}
+            title={contact.followup_snoozed_until && new Date(contact.followup_snoozed_until) > new Date() ? 'Snooze active — click to manage' : 'Snooze auto-follow-ups'}
+          >
+            <Clock className="w-3 h-3" />
           </button>
           <button
             onClick={async (e) => {
@@ -1005,6 +1021,12 @@ export default function ContactList({ initialContactId }: { initialContactId?: s
     setShowReminderModal(true)
   }, [])
 
+  const handleOpenSnooze = useCallback(async (contact: Contact) => {
+    // Open the contact modal focused on the snooze controls
+    const full = await getContactById(contact.id)
+    if (full) setModalContact(full)
+  }, [])
+
   const handleReminderModalClose = useCallback(() => {
     setShowReminderModal(false)
     setReminderContact(null)
@@ -1281,6 +1303,7 @@ export default function ContactList({ initialContactId }: { initialContactId?: s
                         onDelete={handleDelete}
                         onMutualConnectionClick={handleMutualConnectionClick}
                         onCreateReminder={handleCreateReminder}
+                        onSnooze={handleOpenSnooze}
                       />
                     ))}
                   </div>
