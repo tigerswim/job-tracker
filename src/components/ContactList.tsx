@@ -1351,10 +1351,23 @@ export default function ContactList() {
               position="right"
             >
               <div className="card p-6 h-full overflow-hidden">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center space-x-2">
-                  <MessageCircle className="w-5 h-5" />
-                  <span>Interactions</span>
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-800 flex items-center space-x-2">
+                    <MessageCircle className="w-5 h-5" />
+                    <span>Interactions</span>
+                  </h3>
+                  <button
+                    onClick={async () => {
+                      if (!selectedContactId) return
+                      const full = await getContactById(selectedContactId)
+                      if (full) setModalContact(full)
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all"
+                    title="Snooze follow-up reminders"
+                  >
+                    <Clock className="w-4 h-4" />
+                  </button>
+                </div>
                 <div className="flex-1 overflow-auto">
                   <Suspense fallback={
                     <div className="space-y-3">

@@ -223,8 +223,11 @@ function generateEmailContent(
   contactInfo: ContactInfo, 
   jobInfo: JobInfo
 ): { subject: string; body: string } {
-  const appUrl = Deno.env.get('APP_URL') || 'https://your-app-domain.com'
-  
+  const appUrl = Deno.env.get('APP_URL') || 'https://job-tracker.kineticbrandpartners.com'
+  const jobTrackerUrl = `${appUrl}/?tab=network`
+  const contactUrl = reminder.contact_id ? `${appUrl}/?tab=network&contact=${reminder.contact_id}` : appUrl
+  const jobUrl = reminder.job_id ? `${appUrl}/?tab=jobs&job=${reminder.job_id}` : appUrl
+
   let subject = reminder.email_subject
   
   let body = `
@@ -319,7 +322,8 @@ function generateEmailContent(
   // … earlier parts of your template builder
 
   body += `
-  ### 🚀 Quick Actions
+  <div class="links">
+  <h3 style="margin:0 0 16px 0;font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:#1e293b;">🚀 Quick Actions</h3>
 
   <!-- Bulletproof button for Outlook -->
   <!--[if mso]>
@@ -421,7 +425,8 @@ function generateEmailContent(
     View Job
   </a>` : ''}
 
-  Good luck with your follow-up! 🤞
+  </div>
+  <p style="font-family:Arial,sans-serif;font-size:15px;color:#374151;margin-top:24px;">Good luck with your follow-up! 🤞</p>
   `;
 
 
