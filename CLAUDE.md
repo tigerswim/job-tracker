@@ -152,9 +152,6 @@ Modal components implementing this pattern:
 - `displayedContactsCount` starts at 20 (paginated); contacts beyond the first page won't be highlighted/visible if selected via `setSelectedContactId`
 - On mobile, interactions bottom sheet requires `setShowMobileInteractions(true)` separately from `setSelectedContactId`
 
-### ContactModal — Known Gap
-`ContactModal` (in `ContactList.tsx`) has full snooze UI (Clock button + dropdown + amber badge) but `setModalContact()` is never called anywhere — the modal is currently unreachable from the UI. This is pre-existing dead code, not a snooze regression. To expose the modal, wire a contact card click to call `setModalContact(contact)`.
-
 ### Contact Follow-up Snooze
 Per-contact snooze for auto-followup reminders. Controlled by `followup_snoozed_until timestamptz` on `contacts`.
 
@@ -163,12 +160,24 @@ Per-contact snooze for auto-followup reminders. Controlled by `followup_snoozed_
 - **Snooze links in emails**: auto-followup emails include HMAC-signed links for 1w / 1m / 3m / indefinite snooze durations; clicking updates the contact without requiring a login
 - **HMAC utility**: `src/lib/snooze-hmac.ts` — `generateSnoozeToken`, `validateSnoozeToken`, `snoozeUntil`; uses Web Crypto API (works in Node 18+, Deno, browser)
 - **Snooze link route**: `src/app/api/contacts/[id]/snooze/route.ts` — HMAC-validated GET handler; uses service role key for DB update; HTML-escapes all output + sets `Content-Security-Policy: default-src 'none'`
-- **UI**: `ContactModal` in `ContactList.tsx` — Clock icon button in header opens dropdown; amber badge shows active snooze with "Clear" link; optimistic local state update
+- **UI entry points** — all three open `ContactModal` which has the snooze dropdown + amber badge + "Clear" link:
+  - **Contact card Clock icon** — amber when snooze active; click calls `getContactById` → `setModalContact`
+  - **Interactions panel header** (desktop sidebar, visible when a contact is selected) — Clock icon in the panel title bar
+  - **ContactModal header** — Clock icon between Edit and X opens the dropdown directly
 - **Required env vars**:
   - `SNOOZE_LINK_SECRET` — 32-byte hex (`openssl rand -hex 32`); must match in `.env.local`, Netlify env vars, and Supabase Edge Function secrets
   - `SUPABASE_SERVICE_ROLE_KEY` — in `.env.local` and Netlify env vars
   - `APP_URL` — in Supabase Edge Function secrets; set to `https://job-tracker.kineticbrandpartners.com` (the code falls back to this value but won't use the fallback if the secret is set to a wrong value)
 - **Durations**: `1w` (+7 days), `1m` (+1 month), `3m` (+3 months), `indefinite` (year 2099 sentinel)
+
+### Deep-linking from Reminder Emails
+Reminder email buttons use URL params to land the user in the correct tab with the right contact or job already open. `page.tsx` reads these params on mount, sets tab + initial ID state, then erases the params with `window.history.replaceState` so the address bar stays clean.
+
+- **URL format**: `/?tab=network&contact=<uuid>` or `/?tab=jobs&job=<uuid>`
+- **Tab param**: `network` or `contacts` → Network tab; `jobs` → Job Pipeline tab
+- **Contact deep-link**: `initialContactId` prop on `ContactList` — after `cachedContacts` loads, calls `getContactById(id)` → `setModalContact(contact)` to pop the contact modal directly (works even if the contact is beyond the first page of the grid)
+- **Job deep-link**: `initialJobId` prop on `JobList` — after `cachedJobs` loads, finds the job in the list and calls `setSelectedJob` + `setShowJobForm(true)` to open the job edit form
+- **One-shot guard**: both components use a `useRef(false)` flag so the deep-link fires exactly once per mount even if the query data re-renders
 
 ## Development Patterns
 
@@ -196,7 +205,9 @@ Sophisticated scheduling system with:
 - Rate limiting (max 100 active, 15 daily reminders)
 - Status tracking (pending/sent/failed/cancelled)
 - Integration with jobs and contacts for contextual reminders
-- Supabase Edge Functions for email processing
+- Supabase Edge Functions for email processing (`process-email-reminders`)
+- **Deep-link buttons**: "View Contact" → `/?tab=network&contact=<id>`, "View Job" → `/?tab=jobs&job=<id>`, "Open Job Tracker" → `/?tab=network`; all generated from `APP_URL` Edge Function secret
+- **Email rendering**: all buttons use inline-styled HTML (not markdown) for email client compatibility; Outlook bulletproof VML fallbacks included
 
 ### Gmail/Calendar Auto-Sourced Interactions
 Auto-creates interactions from Gmail threads and Calendar events, with a
