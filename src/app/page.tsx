@@ -29,6 +29,8 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'jobs' | 'contacts' | 'reporting' | 'csv'>('jobs')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initialContactId, setInitialContactId] = useState<string | null>(null)
+  const [initialJobId, setInitialJobId] = useState<string | null>(null)
 
   // Fixed useEffect with proper async handling
   useEffect(() => {
@@ -74,6 +76,26 @@ export default function Home() {
       if (cleanup) {
         cleanup()
       }
+    }
+  }, [])
+
+  // Read deep-link params from URL on mount and clean up
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const tab = params.get('tab')
+    const contact = params.get('contact')
+    const job = params.get('job')
+
+    if (tab === 'network' || tab === 'contacts') setActiveTab('contacts')
+    else if (tab === 'jobs') setActiveTab('jobs')
+
+    if (contact) setInitialContactId(contact)
+    if (job) setInitialJobId(job)
+
+    if (tab || contact || job) {
+      const clean = window.location.pathname
+      window.history.replaceState({}, '', clean)
     }
   }, [])
 
@@ -243,8 +265,8 @@ export default function Home() {
           <div className="p-6">
             {/* Tab Content */}
             <div className="space-y-6">
-              {activeTab === 'jobs' && <JobList />}
-              {activeTab === 'contacts' && <><DetectedInteractionsCard /><ContactList /></>}
+              {activeTab === 'jobs' && <JobList initialJobId={initialJobId} />}
+              {activeTab === 'contacts' && <><DetectedInteractionsCard /><ContactList initialContactId={initialContactId} /></>}
               {activeTab === 'reporting' && <Reporting />}
               {activeTab === 'csv' && <CSVManager />}
             </div>

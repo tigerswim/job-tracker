@@ -772,7 +772,7 @@ const useDebounce = (value: string, delay: number) => {
   return debouncedValue
 }
 
-export default function ContactList() {
+export default function ContactList({ initialContactId }: { initialContactId?: string | null } = {}) {
   const queryClient = useQueryClient()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [allContacts, setAllContacts] = useState<Contact[]>([]) // Full unfiltered list for name lookup and suggestions
@@ -895,6 +895,17 @@ export default function ContactList() {
   useEffect(() => {
     setLoading(cachedLoading)
   }, [cachedLoading])
+
+  // Deep-link: open contact modal when arriving from a reminder email link
+  const deepLinkHandled = useRef(false)
+  useEffect(() => {
+    if (deepLinkHandled.current) return
+    if (!initialContactId || !cachedContacts || cachedContacts.length === 0) return
+    deepLinkHandled.current = true
+    getContactById(initialContactId).then((contact) => {
+      if (contact) setModalContact(contact)
+    }).catch(() => { /* ignore — contact may not exist */ })
+  }, [initialContactId, cachedContacts])
 
   const loadContacts = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['contacts'] })

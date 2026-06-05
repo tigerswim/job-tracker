@@ -736,7 +736,7 @@ const StatusFilter = memo(({
 
 StatusFilter.displayName = 'StatusFilter'
 
-export default function JobList() {
+export default function JobList({ initialJobId }: { initialJobId?: string | null } = {}) {
   const queryClient = useQueryClient()
 
   // State management
@@ -948,6 +948,19 @@ export default function JobList() {
       })))
     }
   }, [cachedJobs, jobsLoading, jobsError])
+
+  // Deep-link: open job form when arriving from a reminder email link
+  const deepLinkHandled = useRef(false)
+  useEffect(() => {
+    if (deepLinkHandled.current) return
+    if (!initialJobId || !cachedJobs || cachedJobs.length === 0) return
+    deepLinkHandled.current = true
+    const job = cachedJobs.find(j => j.id === initialJobId)
+    if (job) {
+      setSelectedJob(job)
+      setShowJobForm(true)
+    }
+  }, [initialJobId, cachedJobs])
 
   const handleCloseContactManager = useCallback(() => {
     setShowContactManager(false)
