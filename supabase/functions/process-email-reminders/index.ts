@@ -427,10 +427,8 @@ function generateEmailContent(
 
   </div>
   <p style="font-family:Arial,sans-serif;font-size:15px;color:#374151;margin-top:24px;">Good luck with your follow-up! 🤞</p>
-  `;
+  </div>
 
-
-    
     <div class="footer">
       <p>This reminder was sent by Job Tracker</p>
       <p>You can manage your reminders in the <a href="${appUrl}">Job Tracker app</a></p>
