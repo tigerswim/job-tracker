@@ -67,3 +67,44 @@ export async function DELETE(_req: Request,
     .update({ status: 'dismissed' }).eq('id', id).eq('user_id', user.id)
   return NextResponse.json({ ok: true })
 }
+
+export async function PATCH(req: Request,
+  { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const cookieStore = await cookies()
+  const supa = createRouteHandlerClient({ cookies: () => cookieStore })
+  const { data: { user } } = await supa.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const body = await req.json() as {
+    action: 'dismiss' | 'skip'
+    blockPattern?: string
+    patternType?: 'sender' | 'domain'
+  }
+
+  if (body.action === 'skip') {
+    const skippedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    await supa.from('interaction_review_queue')
+      .update({ status: 'skipped', skipped_until: skippedUntil })
+      .eq('id', id).eq('user_id', user.id)
+    return NextResponse.json({ ok: true })
+  }
+
+  if (body.action === 'dismiss') {
+    await supa.from('interaction_review_queue')
+      .update({ status: 'dismissed' }).eq('id', id).eq('user_id', user.id)
+    if (body.blockPattern && body.patternType) {
+      const safe = body.blockPattern.trim().toLowerCase()
+      if (safe) {
+        await supa.from('blocked_senders').insert({
+          user_id: user.id,
+          pattern: safe,
+          pattern_type: body.patternType,
+        })
+      }
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  return NextResponse.json({ error: 'unknown action' }, { status: 400 })
+}
