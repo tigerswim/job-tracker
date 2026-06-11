@@ -15,6 +15,7 @@ interface EmailReminder {
   email_body: string
   user_message: string
   status: string
+  source?: string
   created_at: string
   updated_at: string
 }
@@ -117,7 +118,10 @@ serve(async (req) => {
         }
 
         // Generate email content
-        const emailContent = generateEmailContent(reminder, contactInfo, jobInfo)
+        // Auto-followup reminders have snooze links pre-built in email_body — use them directly.
+        const emailContent = (reminder.source === 'auto_followup' && reminder.email_body)
+          ? { subject: reminder.email_subject, body: reminder.email_body }
+          : generateEmailContent(reminder, contactInfo, jobInfo)
 
         // Send email via Resend
         await sendEmail(userEmail, emailContent.subject, emailContent.body)
