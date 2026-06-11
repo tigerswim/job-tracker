@@ -1,11 +1,18 @@
 import { normalizeEmail, isOwn, classifyDirection } from './identity'
 import type { NormalizedInteraction } from './types'
 
-const NOISE = /(^|[._-])(no-?reply|noreply|notifications?|donotreply)@/i
+const NOISE = /(^|[._-])(no-?reply|noreply|notifications?|donotreply|digest|alerts?|weekly|monthly|newsletter)@|@(lever\.co|greenhouse\.io|workday\.com|myworkday\.com|jobvite\.com|smartrecruiters\.com|taleo\.net|icims\.com|substack\.com|mailchimp\.com|sendgrid\.net|campaign-archive\.com|constantcontact\.com|klaviyo\.com|beehiiv\.com)/i
+
+const NOISE_SUBJECT = /(weekly|daily|monthly)\s+(digest|roundup|update|newsletter)|job\s+alert|jobs\s+you\s+may\s+like|people\s+also\s+viewed|unsubscribe|view\s+in\s+browser|you'?re\s+receiving\s+this/i
+
 const BODY_TRUNCATE = 800
 
 export function isNoiseSender(from: string): boolean {
   return NOISE.test(normalizeEmail(from))
+}
+
+export function isNoiseSubject(subject: string): boolean {
+  return NOISE_SUBJECT.test(subject)
 }
 
 interface RawPart { mimeType: string; body?: { data?: string }; parts?: RawPart[] }
@@ -45,6 +52,10 @@ export function normalizeThread(
   if (isNoiseSender(last.headers.From) && !isOwn(last.headers.From, identity)) {
     return []
   }
+  const subject = sorted[0].headers.Subject ?? '(no subject)'
+  if (isNoiseSubject(subject)) {
+    return []
+  }
   // collect counterparties across all messages
   const counterparties = new Set<string>()
   for (const m of sorted) {
@@ -53,7 +64,6 @@ export function normalizeThread(
     ].map(normalizeEmail)
     for (const e of everyone) if (!isOwn(e, identity) && e) counterparties.add(e)
   }
-  const subject = sorted[0].headers.Subject ?? '(no subject)'
   const lastDir = classifyDirection(last.headers.From, identity)
   const lastAt = new Date(last.headers.Date).toISOString()
   return [...counterparties].map(cp => ({
