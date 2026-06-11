@@ -18,6 +18,7 @@ export function ReviewItemPanel({ item, onClose, onDone }: Props) {
   const [notes, setNotes] = useState(item.notes)
   const [search, setSearch] = useState(item.suggested_contact_name ?? '')
   const [results, setResults] = useState<ContactLite[]>([])
+  const [showDismissMenu, setShowDismissMenu] = useState(false)
 
   useEffect(() => {
     if (search.length < 2) { setResults([]); return }
@@ -39,10 +40,24 @@ export function ReviewItemPanel({ item, onClose, onDone }: Props) {
     })
     onDone()
   }
-  async function dismiss() {
-    await fetch(`/api/review-queue/${item.id}`, { method: 'DELETE' })
+
+  async function dismiss(blockPattern?: string, patternType?: 'sender' | 'domain') {
+    await fetch(`/api/review-queue/${item.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'dismiss', blockPattern, patternType }),
+    })
     onDone()
   }
+
+  async function skip() {
+    await fetch(`/api/review-queue/${item.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'skip' }),
+    })
+    onDone()
+  }
+
+  const senderDomain = item.counterparty_email?.split('@')[1] ?? null
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -89,13 +104,43 @@ export function ReviewItemPanel({ item, onClose, onDone }: Props) {
         <textarea value={notes} onChange={e => setNotes(e.target.value)}
           rows={6} className="w-full border rounded p-2 mb-4" />
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button disabled={!contactId} onClick={confirm}
             className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-40">
             Confirm
           </button>
-          <button onClick={dismiss}
-            className="border px-4 py-2 rounded">Dismiss</button>
+
+          <div className="relative">
+            <button onClick={() => setShowDismissMenu(v => !v)}
+              className="border px-4 py-2 rounded">
+              Dismiss ▾
+            </button>
+            {showDismissMenu && (
+              <div className="absolute bottom-full mb-1 left-0 bg-white border rounded shadow-lg z-10 min-w-[220px]">
+                <button onClick={() => dismiss()}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm">
+                  Dismiss this item
+                </button>
+                {item.counterparty_email && (
+                  <button onClick={() => dismiss(item.counterparty_email!, 'sender')}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm">
+                    Block {item.counterparty_email}
+                  </button>
+                )}
+                {senderDomain && (
+                  <button onClick={() => dismiss(senderDomain, 'domain')}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm">
+                    Block all from @{senderDomain}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <button onClick={skip}
+            className="border px-4 py-2 rounded text-slate-500">
+            Skip for now
+          </button>
         </div>
       </div>
     </div>
