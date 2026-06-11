@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface Props {
   item: { id: string; type: string; summary: string; notes: string
@@ -19,6 +19,7 @@ export function ReviewItemPanel({ item, onClose, onDone }: Props) {
   const [search, setSearch] = useState(item.suggested_contact_name ?? '')
   const [results, setResults] = useState<ContactLite[]>([])
   const [showDismissMenu, setShowDismissMenu] = useState(false)
+  const dismissRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (search.length < 2) { setResults([]); return }
@@ -29,6 +30,17 @@ export function ReviewItemPanel({ item, onClose, onDone }: Props) {
     }, 250)
     return () => clearTimeout(t)
   }, [search])
+
+  useEffect(() => {
+    if (!showDismissMenu) return
+    function handleClick(e: MouseEvent) {
+      if (dismissRef.current && !dismissRef.current.contains(e.target as Node)) {
+        setShowDismissMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showDismissMenu])
 
   async function confirm() {
     await fetch(`/api/review-queue/${item.id}`, {
@@ -46,6 +58,7 @@ export function ReviewItemPanel({ item, onClose, onDone }: Props) {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'dismiss', blockPattern, patternType }),
     })
+    setShowDismissMenu(false)
     onDone()
   }
 
@@ -54,6 +67,7 @@ export function ReviewItemPanel({ item, onClose, onDone }: Props) {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'skip' }),
     })
+    setShowDismissMenu(false)
     onDone()
   }
 
@@ -110,7 +124,7 @@ export function ReviewItemPanel({ item, onClose, onDone }: Props) {
             Confirm
           </button>
 
-          <div className="relative">
+          <div className="relative" ref={dismissRef}>
             <button onClick={() => setShowDismissMenu(v => !v)}
               className="border px-4 py-2 rounded">
               Dismiss ▾
