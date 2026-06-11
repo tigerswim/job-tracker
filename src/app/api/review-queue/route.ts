@@ -7,11 +7,13 @@ export async function GET() {
   const supa = createRouteHandlerClient({ cookies: () => cookieStore })
   const { data: { user } } = await supa.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  const { data } = await supa.from('interaction_review_queue')
+  const now = new Date().toISOString()
+  const { data, error } = await supa.from('interaction_review_queue')
     .select('*, suggested_contact:contacts!suggested_contact_id(name,email)')
     .eq('user_id', user.id)
-    .or(`status.eq.pending,and(status.eq.skipped,skipped_until.lte.${new Date().toISOString()})`)
+    .or(`status.eq.pending,and(status.eq.skipped,skipped_until.lte.${now})`)
     .order('occurred_at', { ascending: false })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   const items = (data ?? []).map((row: any) => ({
     ...row,
     suggested_contact_name: row.suggested_contact?.name ?? null,

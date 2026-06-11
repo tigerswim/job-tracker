@@ -122,8 +122,9 @@ async function loadContext() {
   const { data: aliases } = await supa.from('contact_email_aliases')
     .select('contact_id,email').eq('user_id', RUN_USER)
   const map = buildMatchMap(contacts ?? [], aliases ?? [])
-  const { data: blockedRows } = await supa.from('blocked_senders')
+  const { data: blockedRows, error: blockedErr } = await supa.from('blocked_senders')
     .select('pattern,pattern_type').eq('user_id', RUN_USER)
+  if (blockedErr) console.error('blocked_senders load failed:', blockedErr.message)
   const blocked: BlockedSenders = { domains: new Set(), senders: new Set() }
   for (const r of blockedRows ?? []) {
     if (r.pattern_type === 'domain') blocked.domains.add(r.pattern.toLowerCase().trim())
@@ -194,13 +195,13 @@ async function syncGmail(token: string, ctx: Awaited<ReturnType<typeof loadConte
         const thread = adaptGmailThread(full)
         const norm = normalizeThread(thread, ctx.identity)
         if (norm.length === 0) { skipped++; continue }
-        seen++
         for (const n of norm) {
           const contactId = n.counterpartyEmail
             ? resolveContact(n.counterpartyEmail, ctx.map) : null
           if (n.counterpartyEmail && isBlocked(n.counterpartyEmail, ctx.blocked)) {
             skipped++; continue
           }
+          seen++
           await upsertReviewQueue(n, contactId); queued++
         }
       }
@@ -231,6 +232,10 @@ async function syncCalendar(token: string, ctx: Awaited<ReturnType<typeof loadCo
         for (const n of norm) {
           const contactId = n.counterpartyEmail
             ? resolveContact(n.counterpartyEmail, ctx.map) : null
+          if (n.counterpartyEmail && isBlocked(n.counterpartyEmail, ctx.blocked)) {
+            skipped++; continue
+          }
+          seen++
           if (contactId) { await upsertInteraction(n, contactId); written++ }
           else { await upsertReviewQueue(n, null); queued++ }
         }

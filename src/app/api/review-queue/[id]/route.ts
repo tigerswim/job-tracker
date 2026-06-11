@@ -91,16 +91,25 @@ export async function PATCH(req: Request,
   }
 
   if (body.action === 'dismiss') {
+    if (body.patternType && !['sender', 'domain'].includes(body.patternType)) {
+      return NextResponse.json({ error: 'invalid patternType' }, { status: 400 })
+    }
     await supa.from('interaction_review_queue')
       .update({ status: 'dismissed' }).eq('id', id).eq('user_id', user.id)
     if (body.blockPattern && body.patternType) {
       const safe = body.blockPattern.trim().toLowerCase()
+      if (body.patternType === 'domain' && safe.includes('@')) {
+        return NextResponse.json({ error: 'domain pattern must not include @' }, { status: 400 })
+      }
       if (safe) {
-        await supa.from('blocked_senders').insert({
+        const { error: insertErr } = await supa.from('blocked_senders').insert({
           user_id: user.id,
           pattern: safe,
           pattern_type: body.patternType,
         })
+        if (insertErr && insertErr.code !== '23505') {
+          console.error('blocked_senders insert failed:', insertErr.message)
+        }
       }
     }
     return NextResponse.json({ ok: true })
