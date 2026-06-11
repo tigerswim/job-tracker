@@ -9,7 +9,8 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { data } = await supa.from('interaction_review_queue')
     .select('*, suggested_contact:contacts!suggested_contact_id(name,email)')
-    .eq('user_id', user.id).eq('status', 'pending')
+    .eq('user_id', user.id)
+    .or(`status.eq.pending,and(status.eq.skipped,skipped_until.lte.${new Date().toISOString()})`)
     .order('occurred_at', { ascending: false })
   const items = (data ?? []).map((row: any) => ({
     ...row,
