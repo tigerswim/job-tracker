@@ -16,6 +16,15 @@ const RUN_USER = Deno.env.get('SYNC_USER_ID')!
 
 const supa = createClient(SUPA_URL, SERVICE)
 
+interface BlockedSenders { domains: Set<string>; senders: Set<string> }
+
+function isBlocked(email: string, blocked: BlockedSenders): boolean {
+  const lower = email.toLowerCase().trim()
+  if (blocked.senders.has(lower)) return true
+  const domain = lower.split('@')[1]
+  return domain ? blocked.domains.has(domain) : false
+}
+
 // refresh_token_encrypted / refresh_token_iv are text columns holding the
 // base64 strings written by the setup script. decryptToken base64-decodes
 // them itself, so they pass straight through — no byte juggling.
@@ -113,7 +122,14 @@ async function loadContext() {
   const { data: aliases } = await supa.from('contact_email_aliases')
     .select('contact_id,email').eq('user_id', RUN_USER)
   const map = buildMatchMap(contacts ?? [], aliases ?? [])
-  return { identity, map }
+  const { data: blockedRows } = await supa.from('blocked_senders')
+    .select('pattern,pattern_type').eq('user_id', RUN_USER)
+  const blocked: BlockedSenders = { domains: new Set(), senders: new Set() }
+  for (const r of blockedRows ?? []) {
+    if (r.pattern_type === 'domain') blocked.domains.add(r.pattern.toLowerCase().trim())
+    else blocked.senders.add(r.pattern.toLowerCase().trim())
+  }
+  return { identity, map, blocked }
 }
 
 async function watermark(source: string): Promise<Date> {
@@ -182,6 +198,9 @@ async function syncGmail(token: string, ctx: Awaited<ReturnType<typeof loadConte
         for (const n of norm) {
           const contactId = n.counterpartyEmail
             ? resolveContact(n.counterpartyEmail, ctx.map) : null
+          if (n.counterpartyEmail && isBlocked(n.counterpartyEmail, ctx.blocked)) {
+            skipped++; continue
+          }
           await upsertReviewQueue(n, contactId); queued++
         }
       }
