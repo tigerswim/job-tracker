@@ -10,6 +10,9 @@ create table if not exists blocked_senders (
 
 create index if not exists blocked_senders_user_id_idx on blocked_senders(user_id);
 
+create unique index if not exists blocked_senders_user_pattern_uidx
+  on blocked_senders(user_id, pattern, pattern_type);
+
 alter table blocked_senders enable row level security;
 
 create policy "users manage own blocked senders"
