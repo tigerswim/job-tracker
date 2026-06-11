@@ -1,5 +1,5 @@
-import { normalizeEmail, isOwn, classifyDirection } from './identity'
-import type { NormalizedInteraction } from './types'
+import { normalizeEmail, isOwn, classifyDirection } from './identity.ts'
+import type { NormalizedInteraction } from './types.ts'
 
 const NOISE = /(^|[._-])(no-?reply|noreply|notifications?|donotreply|digest|alerts?|weekly|monthly|newsletter)@|@(lever\.co|greenhouse\.io|workday\.com|myworkday\.com|jobvite\.com|smartrecruiters\.com|taleo\.net|icims\.com|substack\.com|mailchimp\.com|sendgrid\.net|campaign-archive\.com|constantcontact\.com|klaviyo\.com|beehiiv\.com)/i
 
