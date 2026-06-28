@@ -96,11 +96,24 @@ export async function PATCH(req: Request,
     }
     await supa.from('interaction_review_queue')
       .update({ status: 'dismissed' }).eq('id', id).eq('user_id', user.id)
+
     if (body.blockPattern && body.patternType) {
-      const safe = body.blockPattern.trim().toLowerCase()
+      // Normalize the pattern so it matches the bare counterparty_email values.
+      // sender: extract bare email from a possible "Name <email>" header.
+      // domain: strip brackets, leading @, and trailing '>'.
+      let safe: string
+      if (body.patternType === 'sender') {
+        const m = body.blockPattern.match(/<([^>]+)>/)
+        const bare = (m ? m[1] : body.blockPattern).trim().toLowerCase().replace(/>+$/, '')
+        safe = bare.includes('@') ? bare : body.blockPattern.trim().toLowerCase()
+      } else {
+        safe = body.blockPattern.trim().toLowerCase().replace(/[<>]/g, '').replace(/^@/, '')
+      }
+
       if (body.patternType === 'domain' && safe.includes('@')) {
         return NextResponse.json({ error: 'domain pattern must not include @' }, { status: 400 })
       }
+
       if (safe) {
         const { error: insertErr } = await supa.from('blocked_senders').insert({
           user_id: user.id,
@@ -110,6 +123,19 @@ export async function PATCH(req: Request,
         if (insertErr && insertErr.code !== '23505') {
           console.error('blocked_senders insert failed:', insertErr.message)
         }
+
+        // Retroactively dismiss already-queued items from this sender/domain.
+        // sender → exact match; domain → '%@<domain>' so 'example.com' doesn't
+        // match 'notexample.com'. Best-effort: log but don't fail the request.
+        let sweep = supa.from('interaction_review_queue')
+          .update({ status: 'dismissed' })
+          .eq('user_id', user.id)
+          .in('status', ['pending', 'skipped'])
+        sweep = body.patternType === 'sender'
+          ? sweep.eq('counterparty_email', safe)
+          : sweep.ilike('counterparty_email', `%@${safe}`)
+        const { error: sweepErr } = await sweep
+        if (sweepErr) console.error('block sweep failed:', sweepErr.message)
       }
     }
     return NextResponse.json({ ok: true })

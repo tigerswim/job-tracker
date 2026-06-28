@@ -1,4 +1,4 @@
-import { normalizeEmail, isOwn, classifyDirection } from './identity.ts'
+import { normalizeEmail, isOwn, classifyDirection, parseEmailAddress } from './identity.ts'
 import type { NormalizedInteraction } from './types.ts'
 
 const NOISE = /(^|[._-])(no-?reply|noreply|notifications?|donotreply|digest|alerts?|weekly|monthly|newsletter)@|@(lever\.co|greenhouse\.io|workday\.com|myworkday\.com|jobvite\.com|smartrecruiters\.com|taleo\.net|icims\.com|substack\.com|mailchimp\.com|sendgrid\.net|campaign-archive\.com|constantcontact\.com|klaviyo\.com|beehiiv\.com)/i
@@ -36,10 +36,7 @@ function extractPlainText(part: RawPart): string {
 
 function parseAddrs(v?: string): string[] {
   if (!v) return []
-  return v.split(',').map(s => {
-    const m = s.match(/<([^>]+)>/)
-    return normalizeEmail(m ? m[1] : s)
-  })
+  return v.split(',').map(s => parseEmailAddress(s)).filter(Boolean)
 }
 
 export function normalizeThread(
@@ -60,9 +57,10 @@ export function normalizeThread(
   const counterparties = new Set<string>()
   for (const m of sorted) {
     const everyone = [
-      m.headers.From, ...parseAddrs(m.headers.To), ...parseAddrs(m.headers.Cc),
-    ].map(normalizeEmail)
-    for (const e of everyone) if (!isOwn(e, identity) && e) counterparties.add(e)
+      parseEmailAddress(m.headers.From),
+      ...parseAddrs(m.headers.To), ...parseAddrs(m.headers.Cc),
+    ]
+    for (const e of everyone) if (e && !isOwn(e, identity)) counterparties.add(e)
   }
   const lastDir = classifyDirection(last.headers.From, identity)
   const lastAt = new Date(last.headers.Date).toISOString()
