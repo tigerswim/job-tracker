@@ -320,7 +320,13 @@ follow-up reminders.
   `timeout_milliseconds := 60000` into the cron command (default 5s was
   shorter than a real sync, so the HTTP client disconnected mid-run and no
   `sync_runs` row was written); `0008` adds `followup_snoozed_until timestamptz`
-  to `contacts` with a partial index for the snooze filter query.
+  to `contacts` with a partial index for the snooze filter query; `0009`
+  noise filtering (`blocked_senders` per-user dismiss-and-learn table); `0010`
+  unique index on `blocked_senders(user_id, pattern, pattern_type)`; `0011`
+  normalizes dirty data — rewrites `interaction_review_queue.counterparty_email`
+  to bare email, cleans malformed `blocked_senders` patterns, and retroactively
+  dismisses already-queued rows matching a block rule (idempotent; ctid
+  tie-break in de-dup).
   **Important**: `0002` and `0005` silently skip cron scheduling if the Vault
   secret is absent (and `0005`'s unguarded `cron.unschedule` aborts if no job
   exists). The Vault secret must be provisioned **before** applying these
@@ -328,6 +334,18 @@ follow-up reminders.
   missing or misbehaving, run `select public.ensure_sync_google_cron();`
   (see Cron scheduling gotcha above).
 - **Tests**: `npm test` (Vitest; runs the vendored-drift check first).
+- **Bare-email invariant**: `counterparty_email` (and `blocked_senders.pattern`
+  for senders) must always be a BARE email — never a raw `Name <email>` header.
+  Centralized in `parseEmailAddress` (`src/lib/google-sync/identity.ts`, vendored
+  to `_shared/`). Block matching is exact-match on bare email / `@`-anchored
+  domain on both sides — a raw header breaks it silently. If blocked senders
+  reappear in the Detected card, check for bracketed values:
+  `select counterparty_email from interaction_review_queue where counterparty_email like '%<%'`.
+- **Edge Function deploys SEPARATELY from the app**: a Netlify/app deploy does
+  NOT update the sync function. After changing anything under
+  `supabase/functions/sync-google-interactions/` (incl. vendored `_shared/`), run
+  `supabase functions deploy sync-google-interactions`. Manual trigger:
+  `curl -s -X POST "$URL/functions/v1/sync-google-interactions" -H "Authorization: Bearer $ANON_KEY"`.
 - **Single-user by design**: the sync runs for one hardcoded `SYNC_USER_ID`;
   other logged-in users see an inert Detected card. Making it multi-user is a
   scoped follow-up project — see
