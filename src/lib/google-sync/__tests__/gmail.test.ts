@@ -111,4 +111,16 @@ describe('gmail', () => {
     }
     expect(normalizeThread(t, identity)).toHaveLength(1)
   })
+  it('extracts a bare counterparty email from a display-name From header', () => {
+    const t = {
+      id: 'thr2',
+      messages: [
+        { headers: { From: 'me@gmail.com', To: 'Acme <hello@example.com>', Subject: 'Q', Date: '2026-05-01T10:00:00Z' } },
+        { headers: { From: 'Acme <hello@example.com>', To: 'me@gmail.com', Subject: 'Re: Q', Date: '2026-05-02T10:00:00Z' } },
+      ],
+    }
+    const out = normalizeThread(t, identity)
+    expect(out).toHaveLength(1)
+    expect(out[0].counterpartyEmail).toBe('hello@example.com')
+  })
 })
