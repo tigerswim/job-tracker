@@ -1161,6 +1161,7 @@ export default function ContactList({ initialContactId }: { initialContactId?: s
                 placeholder={searchMode === 'contacts' ? 'Search contacts by name, company, email, experience, education, or connections...' : 'Search interactions by summary, notes, or contact name...'}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => setSelectedContactId(null)}
                 className={`w-full px-4 py-3 pl-12 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors ${dmSans.className}`}
               />
               {searchTerm && (
@@ -1233,6 +1234,7 @@ export default function ContactList({ initialContactId }: { initialContactId?: s
               placeholder={searchMode === 'contacts' ? 'Search contacts...' : 'Search interactions...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => setSelectedContactId(null)}
               className={`w-full px-4 py-3 pl-12 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors ${dmSans.className}`}
             />
             {searchTerm && (
