@@ -413,6 +413,12 @@ Then check the parent chain for any stable `data-*` attributes or IDs to target.
 - LinkedIn dropped all stable `li`/class selectors for search result cards.
 - **Fix (Strategy 0)**: Select all `a[href*="/in/"]` links whose **direct parent is a `DIV`** — these are always the card-subject name links. Links with `P` parents are duplicates or mutual-connection previews inside other cards.
 - Name is embedded in the link's full text as `"Name • 1stHeadline..."` — split on ` • ` (unicode bullet U+2022) and take the first part.
+
+##### Doubled names & badge text (2026-06) — `cleanLinkedInName`
+Symptom: connection pills show the name **twice** ("Tia Cummings-Hopkins Tia Cummings-Hopkins") and badge-holders get extra glued text ("Danny Silverman is hiringDanny Silverman").
+- **Cause**: LinkedIn renders a visually-hidden accessibility copy of the name next to the visible one, so `a.textContent` returns it doubled. Status badges ("is hiring", "is open to work") and the degree suffix get concatenated in too. The old ` • ` split didn't help because that separator isn't inside these anchors anymore.
+- **Fix**: Strategy 0 now reads the `span[aria-hidden="true"]` inside the anchor (the clean single copy) instead of raw `a.textContent`, then passes it through `cleanLinkedInName()` — which strips badge phrases + degree suffix and de-duplicates an exactly-doubled name (with or without a separating space) as a backstop for when the aria-span is absent.
+- If pills look doubled/garbled again, check whether the aria-hidden span still exists; if LinkedIn drops it, `cleanLinkedInName`'s halves-dedup still catches the common cases.
 - If this breaks again, run in DevTools:
   ```javascript
   document.querySelectorAll('a[href*="/in/"]').forEach(function(a, i) {
