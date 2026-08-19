@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Rocket, Briefcase, Users, BarChart3, Upload, User, Building, Mail, Phone, Linkedin, Network, X } from 'lucide-react'
+import { Rocket, Briefcase, Users, BarChart3, Upload, User, Building, Mail, Linkedin, X } from 'lucide-react'
 import { DM_Sans, Archivo } from 'next/font/google'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
@@ -92,34 +92,38 @@ export default function LandingPageV2() {
         <div className="absolute top-0 right-0 w-1/3 h-96 bg-indigo-400 opacity-20 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-1/4 h-96 bg-slate-400 opacity-15 blur-3xl" />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-8 py-16 lg:py-24">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div className="relative z-10 max-w-7xl mx-auto px-8 py-16 lg:py-20">
+          <div className="grid lg:grid-cols-2 gap-12 xl:gap-16 items-center">
             {/* Left side - Original copy */}
             <div className="text-center lg:text-left">
               {/* Headline from original */}
-              <h1 className={`text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight text-slate-900 mb-6 ${archivo.className}`}>
-                Your network knows where the jobs are.
+              <h1 className={`text-4xl sm:text-5xl lg:text-[3.25rem] font-bold leading-[1.08] tracking-tight text-slate-900 mb-6 text-balance ${archivo.className}`}>
+                Remember every connection. And every conversation since.
               </h1>
 
               {/* Subhead from original */}
-              <p className={`text-lg sm:text-xl lg:text-2xl text-slate-600 mb-10 leading-relaxed ${dmSans.className}`}>
-                Track every contact, conversation, and connection in one place. Because job hunting isn't about applying harder—it's about networking smarter.
+              <p className={`text-base sm:text-lg text-slate-600 mb-8 leading-relaxed max-w-xl mx-auto lg:mx-0 ${dmSans.className}`}>
+                Log when you connected on LinkedIn, then keep a running history of every email, call, meeting, and message that follows. Your relationships stay warm because nothing slips through the cracks.
               </p>
 
               {/* CTA from original */}
               <div>
                 <button
                   onClick={() => setShowModal(true)}
-                  className={`group px-10 py-5 bg-gradient-to-br from-slate-900 to-slate-700 text-white text-xl font-bold rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 inline-flex items-center gap-3 ${dmSans.className}`}
+                  className={`group px-8 py-4 bg-gradient-to-br from-slate-900 to-slate-700 text-white text-lg font-bold rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 inline-flex items-center gap-3 ${dmSans.className}`}
                 >
-                  See Who Can Help You in 30 Seconds
-                  <Rocket className="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                  Start Building Your Network
+                  <Rocket className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 </button>
+
+                <p className={`mt-5 text-sm text-slate-500 max-w-xl mx-auto lg:mx-0 text-balance ${dmSans.className}`}>
+                  Tracking a job search too? Link contacts to the roles you&apos;re pursuing and see who can help.
+                </p>
               </div>
             </div>
 
             {/* Right side - Dashboard preview */}
-            <div className="hidden lg:block">
+            <div className="mt-12 lg:mt-0">
               <div className="relative">
                 {/* Decorative blur background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-400/20 to-slate-400/20 blur-3xl rounded-3xl" />
@@ -140,7 +144,7 @@ export default function LandingPageV2() {
                   {/* Mock navigation tabs */}
                   <div className="p-4 pb-3">
                     <div className="bg-slate-50 rounded-xl p-2 border-2 border-slate-200">
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {/* Job Pipeline Tab */}
                         <div className="p-3 rounded-lg hover:bg-white/80 transition-colors">
                           <div className="flex items-center gap-2">
@@ -161,7 +165,7 @@ export default function LandingPageV2() {
                             </div>
                             <div className="text-left">
                               <div className={`text-xs font-semibold text-slate-900 ${dmSans.className}`}>Network</div>
-                              <div className={`text-[10px] text-slate-500 ${dmSans.className}`}>Contacts</div>
+                              <div className={`text-[10px] text-slate-500 ${dmSans.className}`}>Connections</div>
                             </div>
                           </div>
                           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-10 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 rounded-full" />
@@ -196,7 +200,7 @@ export default function LandingPageV2() {
 
                   {/* Mock contact cards - 3-column grid */}
                   <div className="px-4 pb-6">
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                       {/* Contact 1 */}
                       <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group">
                         <div className="flex justify-between items-start mb-2">
@@ -213,13 +217,23 @@ export default function LandingPageV2() {
                           <Building className="w-3 h-3 flex-shrink-0 text-slate-400" />
                           <p className={`text-xs truncate ${dmSans.className}`}>Acme Industries</p>
                         </div>
-                        <div className="flex items-center space-x-1 text-slate-600 mb-2">
+                        <div className="flex items-center space-x-1 text-slate-600 mb-1">
                           <Briefcase className="w-3 h-3 flex-shrink-0 text-slate-400" />
                           <p className={`text-xs truncate ${dmSans.className}`}>VP Engineering</p>
                         </div>
-                        <div className="inline-flex items-center gap-1 px-2 py-1 bg-slate-900 text-white rounded-lg text-xs font-semibold">
-                          <Briefcase className="w-3 h-3" />
-                          <span>2 jobs</span>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-1">
+                          <Linkedin className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`text-blue-600 truncate ${dmSans.className}`}>LinkedIn Profile</span>
+                        </div>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-2">
+                          <Mail className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`truncate ${dmSans.className}`}>jordan.chen@acme.com</span>
+                        </div>
+                        <div className="mb-1">
+                          <div className="inline-flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs border border-blue-200">
+                            <Briefcase className="w-3 h-3" />
+                            <span>2 linked jobs</span>
+                          </div>
                         </div>
                       </div>
 
@@ -239,13 +253,23 @@ export default function LandingPageV2() {
                           <Building className="w-3 h-3 flex-shrink-0 text-slate-400" />
                           <p className={`text-xs truncate ${dmSans.className}`}>CloudScale</p>
                         </div>
-                        <div className="flex items-center space-x-1 text-slate-600 mb-2">
-                          <Mail className="w-3 h-3 flex-shrink-0 text-slate-400" />
-                          <span className={`text-xs truncate ${dmSans.className}`}>sarah@email.com</span>
+                        <div className="flex items-center space-x-1 text-slate-600 mb-1">
+                          <Briefcase className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <p className={`text-xs truncate ${dmSans.className}`}>Director of Product</p>
                         </div>
-                        <div className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-semibold">
-                          <Briefcase className="w-3 h-3" />
-                          <span>1 job</span>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-1">
+                          <Linkedin className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`text-blue-600 truncate ${dmSans.className}`}>LinkedIn Profile</span>
+                        </div>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-2">
+                          <Mail className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`truncate ${dmSans.className}`}>sarah.park@cloudscale.io</span>
+                        </div>
+                        <div className="mb-1">
+                          <div className="inline-flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs border border-blue-200">
+                            <Briefcase className="w-3 h-3" />
+                            <span>1 linked job</span>
+                          </div>
                         </div>
                       </div>
 
@@ -265,9 +289,17 @@ export default function LandingPageV2() {
                           <Building className="w-3 h-3 flex-shrink-0 text-slate-400" />
                           <p className={`text-xs truncate ${dmSans.className}`}>DesignLabs</p>
                         </div>
-                        <div className="flex items-center space-x-1 text-slate-600 mb-2">
-                          <Network className="w-3 h-3 text-slate-400" />
-                          <span className={`text-xs ${dmSans.className}`}>3 mutual</span>
+                        <div className="flex items-center space-x-1 text-slate-600 mb-1">
+                          <Briefcase className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <p className={`text-xs truncate ${dmSans.className}`}>Head of Design</p>
+                        </div>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-1">
+                          <Linkedin className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`text-blue-600 truncate ${dmSans.className}`}>LinkedIn Profile</span>
+                        </div>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-2">
+                          <Mail className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`truncate ${dmSans.className}`}>marcus@designlabs.co</span>
                         </div>
                       </div>
 
@@ -287,9 +319,23 @@ export default function LandingPageV2() {
                           <Building className="w-3 h-3 flex-shrink-0 text-slate-400" />
                           <p className={`text-xs truncate ${dmSans.className}`}>TechFlow</p>
                         </div>
-                        <div className="flex items-center space-x-1 text-slate-600 mb-2">
-                          <Phone className="w-3 h-3 text-slate-400" />
-                          <span className={`text-xs ${dmSans.className}`}>(415) 555-0123</span>
+                        <div className="flex items-center space-x-1 text-slate-600 mb-1">
+                          <Briefcase className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <p className={`text-xs truncate ${dmSans.className}`}>Engineering Manager</p>
+                        </div>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-1">
+                          <Linkedin className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`text-blue-600 truncate ${dmSans.className}`}>LinkedIn Profile</span>
+                        </div>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-2">
+                          <Mail className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`truncate ${dmSans.className}`}>alex.kim@techflow.dev</span>
+                        </div>
+                        <div className="mb-1">
+                          <div className="inline-flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs border border-blue-200">
+                            <Briefcase className="w-3 h-3" />
+                            <span>3 linked jobs</span>
+                          </div>
                         </div>
                       </div>
 
@@ -301,21 +347,25 @@ export default function LandingPageV2() {
                               <User className="w-4 h-4 text-white" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className={`text-sm font-bold text-slate-900 truncate ${dmSans.className}`}>Priya Patel</h3>
+                              <h3 className={`text-sm font-bold text-slate-900 truncate ${dmSans.className}`}>Priya Nair</h3>
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center space-x-1 text-slate-600 mb-1">
                           <Building className="w-3 h-3 flex-shrink-0 text-slate-400" />
-                          <p className={`text-xs truncate ${dmSans.className}`}>DataCorp</p>
+                          <p className={`text-xs truncate ${dmSans.className}`}>Northwind</p>
                         </div>
-                        <div className="flex items-center space-x-1 text-slate-600 mb-2">
-                          <Linkedin className="w-3 h-3 text-slate-400" />
-                          <span className={`text-xs text-indigo-600 truncate ${dmSans.className}`}>LinkedIn</span>
+                        <div className="flex items-center space-x-1 text-slate-600 mb-1">
+                          <Briefcase className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <p className={`text-xs truncate ${dmSans.className}`}>Talent Partner</p>
                         </div>
-                        <div className="inline-flex items-center gap-1 px-2 py-1 bg-slate-900 text-white rounded-lg text-xs font-semibold">
-                          <Briefcase className="w-3 h-3" />
-                          <span>3 jobs</span>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-1">
+                          <Linkedin className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`text-blue-600 truncate ${dmSans.className}`}>LinkedIn Profile</span>
+                        </div>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-2">
+                          <Mail className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`truncate ${dmSans.className}`}>priya.nair@northwind.com</span>
                         </div>
                       </div>
 
@@ -335,11 +385,26 @@ export default function LandingPageV2() {
                           <Building className="w-3 h-3 flex-shrink-0 text-slate-400" />
                           <p className={`text-xs truncate ${dmSans.className}`}>BuildRight</p>
                         </div>
-                        <div className="flex items-center space-x-1 text-slate-600 mb-2">
-                          <Network className="w-3 h-3 text-slate-400" />
-                          <span className={`text-xs ${dmSans.className}`}>5 mutual</span>
+                        <div className="flex items-center space-x-1 text-slate-600 mb-1">
+                          <Briefcase className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <p className={`text-xs truncate ${dmSans.className}`}>Principal Architect</p>
+                        </div>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-1">
+                          <Linkedin className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`text-blue-600 truncate ${dmSans.className}`}>LinkedIn Profile</span>
+                        </div>
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 mb-2">
+                          <Mail className="w-3 h-3 flex-shrink-0 text-slate-400" />
+                          <span className={`truncate ${dmSans.className}`}>m.torres@buildright.com</span>
+                        </div>
+                        <div className="mb-1">
+                          <div className="inline-flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs border border-blue-200">
+                            <Briefcase className="w-3 h-3" />
+                            <span>1 linked job</span>
+                          </div>
                         </div>
                       </div>
+
                     </div>
                   </div>
                 </div>
@@ -377,7 +442,7 @@ export default function LandingPageV2() {
                 {!isEmailMode ? (
                   <>
                     <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                      Sign in to access your network intelligence dashboard and start tracking connections.
+                      Sign in to pick up your network where you left off — connections, conversations, and what to do next.
                     </p>
 
                     <button
@@ -408,15 +473,15 @@ export default function LandingPageV2() {
                       <div className="space-y-3">
                         <div className="flex gap-3 items-start">
                           <div className="w-5 h-5 bg-slate-900 rounded flex-shrink-0 mt-0.5" />
-                          <span className="text-slate-600">Unlimited contact tracking and management</span>
+                          <span className="text-slate-600">A dated record of every connection you make</span>
                         </div>
                         <div className="flex gap-3 items-start">
                           <div className="w-5 h-5 bg-indigo-500 rounded flex-shrink-0 mt-0.5" />
-                          <span className="text-slate-600">Job application pipeline tracking</span>
+                          <span className="text-slate-600">Full interaction history &mdash; email, calls, meetings, LinkedIn</span>
                         </div>
                         <div className="flex gap-3 items-start">
                           <div className="w-5 h-5 bg-slate-900 rounded flex-shrink-0 mt-0.5" />
-                          <span className="text-slate-600">Smart follow-up reminders</span>
+                          <span className="text-slate-600">Follow-up reminders, plus job pipeline tracking</span>
                         </div>
                       </div>
                     </div>
