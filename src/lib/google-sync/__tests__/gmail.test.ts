@@ -124,3 +124,47 @@ describe('gmail', () => {
     expect(out[0].counterpartyEmail).toBe('hello@example.com')
   })
 })
+
+// --- per-message identity + multi-counterparty (thread-reply detection) ---
+describe('gmail: lastMessageId', () => {
+  const identity2 = new Set(['me@gmail.com'])
+
+  it('exposes the newest message id so interactions can key per-message', () => {
+    const t = {
+      id: 'thr1',
+      messages: [
+        { id: 'msg-old', headers: { From: 'me@gmail.com', To: 'them@x.com', Subject: 'Hi', Date: '2026-05-01T10:00:00Z' } },
+        { id: 'msg-new', headers: { From: 'them@x.com', To: 'me@gmail.com', Subject: 'Re: Hi', Date: '2026-05-03T10:00:00Z' } },
+      ],
+    }
+    const out = normalizeThread(t as any, identity2)
+    expect(out[0].externalId).toBe('thr1')
+    expect(out[0].lastMessageId).toBe('msg-new')
+  })
+
+  it('picks the newest message id regardless of array order', () => {
+    const t = {
+      id: 'thr2',
+      messages: [
+        { id: 'msg-new', headers: { From: 'them@x.com', To: 'me@gmail.com', Subject: 'Re: Hi', Date: '2026-05-03T10:00:00Z' } },
+        { id: 'msg-old', headers: { From: 'me@gmail.com', To: 'them@x.com', Subject: 'Hi', Date: '2026-05-01T10:00:00Z' } },
+      ],
+    }
+    const out = normalizeThread(t as any, identity2)
+    expect(out[0].lastMessageId).toBe('msg-new')
+  })
+
+  it('gives every counterparty of a multi-recipient thread the same message id', () => {
+    const t = {
+      id: 'thr3',
+      messages: [
+        { id: 'm1', headers: { From: 'them@x.com', To: 'me@gmail.com, other@y.com', Subject: 'Intro', Date: '2026-05-05T10:00:00Z' } },
+      ],
+    }
+    const out = normalizeThread(t as any, identity2)
+    const emails = out.map(o => o.counterpartyEmail).sort()
+    expect(emails).toEqual(['other@y.com', 'them@x.com'])
+    expect(out.every(o => o.lastMessageId === 'm1')).toBe(true)
+    expect(new Set(out.map(o => o.externalId))).toEqual(new Set(['thr3']))
+  })
+})

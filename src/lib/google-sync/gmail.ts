@@ -17,6 +17,7 @@ export function isNoiseSubject(subject: string): boolean {
 
 interface RawPart { mimeType: string; body?: { data?: string }; parts?: RawPart[] }
 interface RawMsg {
+  id?: string
   headers: { From: string; To?: string; Cc?: string; Subject?: string; Date: string }
   payload?: RawPart
 }
@@ -67,6 +68,7 @@ export function normalizeThread(
   return [...counterparties].map(cp => ({
     source: 'gmail' as const,
     externalId: thread.id,
+    lastMessageId: last.id ?? null,
     counterpartyEmail: cp,
     type: 'email' as const,
     occurredAt: new Date(sorted[0].headers.Date).toISOString(),

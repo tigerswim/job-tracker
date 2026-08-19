@@ -6,6 +6,7 @@ export type InteractionType =
 export interface NormalizedInteraction {
   source: SyncSource
   externalId: string            // gmail thread id / gcal (recurring) event id
+  lastMessageId: string | null  // gmail id of the newest message; null for gcal
   counterpartyEmail: string | null
   type: InteractionType
   occurredAt: string            // ISO

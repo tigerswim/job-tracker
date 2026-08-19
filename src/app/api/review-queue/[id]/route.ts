@@ -25,9 +25,16 @@ export async function POST(req: Request,
   // Create the real interaction FIRST and verify it succeeded. If this
   // fails we must NOT mark the queue item accepted (that silently loses the
   // interaction — the bug this replaces).
+  // Key the interaction on the specific Gmail MESSAGE, not the thread. The
+  // queue is thread-grained, so a thread-keyed external_id made accepting the
+  // same thread twice overwrite one interaction instead of appending -- an
+  // ongoing conversation collapsed to a single timeline entry. Falls back to
+  // the thread/event id for calendar items and older rows with no message id.
+  const interactionExternalId = q.last_message_id ?? q.external_id
+
   const { error: interactionErr } = await supa.from('interactions').upsert({
     user_id: user.id, contact_id: body.contact_id, source: q.source,
-    external_id: q.external_id, type: body.type, date: body.date,
+    external_id: interactionExternalId, type: body.type, date: body.date,
     summary: body.summary, notes: body.notes,
   }, { onConflict: 'user_id,contact_id,source,external_id' })
   if (interactionErr) {

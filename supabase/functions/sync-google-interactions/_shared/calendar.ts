@@ -32,6 +32,7 @@ export function normalizeEvent(
   return [...new Set(externals)].map(cp => ({
     source: 'gcal' as const,
     externalId,
+    lastMessageId: null,
     counterpartyEmail: cp,
     type: (isVideo ? 'video_call' : 'meeting') as const,
     occurredAt: at,

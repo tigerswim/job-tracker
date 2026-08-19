@@ -6,6 +6,7 @@ import { normalizeEvent } from './_shared/calendar.ts'
 import { buildMatchMap, resolveContact } from './_shared/matching.ts'
 import { detectOpenLoops, shouldSelfCancel } from './_shared/followup-rules.ts'
 import { DEFAULT_FOLLOWUP_SETTINGS } from './_shared/types.ts'
+import { decideQueueWrite } from './_shared/queue-reopen.ts'
 
 const SUPA_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -143,15 +144,47 @@ async function watermark(source: string): Promise<Date> {
   return new Date(Math.min(Date.parse(wm), floor.getTime()))
 }
 
-async function upsertReviewQueue(n: any, contactId: string | null) {
-  // Insert-only: never overwrite an existing row's status. If the user
-  // dismissed or accepted this item, leave it alone on subsequent syncs.
-  await supa.from('interaction_review_queue').upsert({
+// Returns true when a row was actually written (insert or reopen), so callers
+// can count real writes instead of attempts. The old version used
+// `ignoreDuplicates: true`, which silently discarded every reply on a thread
+// that had already been accepted -- and still reported it as "queued".
+async function upsertReviewQueue(n: any, contactId: string | null): Promise<boolean> {
+  // counterparty_email is nullable. `.eq(col, '')` never matches a SQL NULL,
+  // so the null case must use `.is()` or the lookup misses the existing row
+  // and every run tries to insert a duplicate.
+  let q = supa.from('interaction_review_queue')
+    .select('id,status,occurred_at,skipped_until')
+    .eq('user_id', RUN_USER).eq('source', n.source)
+    .eq('external_id', n.externalId)
+  q = n.counterpartyEmail
+    ? q.eq('counterparty_email', n.counterpartyEmail)
+    : q.is('counterparty_email', null)
+  const { data: existing } = await q.maybeSingle()
+
+  const decision = decideQueueWrite(existing ?? null, n, new Date())
+  if (decision.action === 'skip') return false
+
+  const payload = {
     user_id: RUN_USER, source: n.source, external_id: n.externalId,
     suggested_contact_id: contactId, counterparty_email: n.counterpartyEmail,
     type: n.type, occurred_at: n.lastMessageAt ?? n.occurredAt,
     summary: n.summary, notes: n.notes, status: 'pending',
-  }, { onConflict: 'user_id,source,external_id', ignoreDuplicates: true })
+    last_message_id: n.lastMessageId ?? null,
+  }
+
+  if (decision.action === 'insert') {
+    const { error } = await supa.from('interaction_review_queue').insert(payload)
+    // 23505: a concurrent run inserted first. Not an error worth failing on.
+    if (error && error.code !== '23505') throw error
+    return !error
+  }
+
+  // reopen: refresh contents and pull the row back into the review queue,
+  // clearing any expired snooze so it does not re-suppress later.
+  const { error } = await supa.from('interaction_review_queue')
+    .update({ ...payload, skipped_until: null }).eq('id', existing!.id)
+  if (error) throw error
+  return true
 }
 
 async function upsertInteraction(n: any, contactId: string) {
@@ -170,7 +203,10 @@ function adaptGmailThread(full: any) {
     messages: (full.messages ?? []).map((m: any) => {
       const h: Record<string, string> = {}
       for (const x of m.payload?.headers ?? []) h[x.name] = x.value
-      return { headers: {
+      // m.id must be carried through: normalizeThread reads it to record which
+      // message is newest, which is what lets the accept path key interactions
+      // per message instead of per thread.
+      return { id: m.id, headers: {
         From: h.From ?? '', To: h.To, Cc: h.Cc,
         Subject: h.Subject, Date: h.Date ?? new Date().toISOString(),
       }, payload: m.payload }
@@ -202,7 +238,8 @@ async function syncGmail(token: string, ctx: Awaited<ReturnType<typeof loadConte
             skipped++; continue
           }
           seen++
-          await upsertReviewQueue(n, contactId); queued++
+          if (await upsertReviewQueue(n, contactId)) queued++
+          else skipped++
         }
       }
       pageToken = list.nextPageToken
@@ -237,7 +274,8 @@ async function syncCalendar(token: string, ctx: Awaited<ReturnType<typeof loadCo
           }
           seen++
           if (contactId) { await upsertInteraction(n, contactId); written++ }
-          else { await upsertReviewQueue(n, null); queued++ }
+          else if (await upsertReviewQueue(n, null)) queued++
+          else skipped++
         }
       }
       pageToken = list.nextPageToken

@@ -334,6 +334,36 @@ follow-up reminders.
   missing or misbehaving, run `select public.ensure_sync_google_cron();`
   (see Cron scheduling gotcha above).
 - **Tests**: `npm test` (Vitest; runs the vendored-drift check first).
+- **Thread replies re-open the queue** (migration `0012`): the review queue is
+  keyed per Gmail THREAD. The original write used `ignoreDuplicates: true`,
+  so accepting a thread once permanently muted every later reply on it —
+  a contact's 2026-08-18 email never surfaced because that thread had been
+  accepted on 2026-07-09. Two fixes, both in `0012`:
+  - **Status rules** now live in `src/lib/google-sync/queue-reopen.ts`
+    (`decideQueueWrite`, vendored to `_shared/`): `dismissed` is sticky
+    forever (preserves newsletter muting + `blocked_senders`); `skipped`
+    is sticky until `skipped_until` expires (a 7-day snooze must not be
+    cancelled by new mail); `accepted`/`pending` re-open to `pending` only
+    when the thread has a genuinely newer message. That last guard is what
+    stops all ~88 accepted threads re-queueing on the next run.
+  - **Queue key widened** to `(user_id, source, external_id,
+    coalesce(counterparty_email,''))`. `normalizeThread` returns one entry
+    per counterparty but all share the thread id, so the old 3-column key
+    made multi-recipient threads collide — first counterparty won, the rest
+    were silently dropped.
+  - **`interactions.external_id` is now the MESSAGE id** (`last_message_id`
+    on the queue row), not the thread id. Thread-keyed upserts meant
+    accepting the same thread twice OVERWROTE one interaction instead of
+    appending, collapsing an ongoing conversation to a single timeline entry.
+    Falls back to `external_id` for calendar items and pre-0012 rows.
+  - **Gotcha**: `adaptGmailThread` in `index.ts` rebuilds each message and
+    must copy `m.id`. It originally dropped it, so `last_message_id` silently
+    wrote NULL even though `normalizeThread` was correct. The adapter is not
+    unit-tested (it lives in the Edge Function) — verify against a real run,
+    not just `npm test`.
+  - `items_queued` now counts real writes; suppressed writes count as
+    `items_skipped`. Previously the counter incremented before the write, so
+    a fully-muted thread still reported as queued and hid this bug.
 - **Bare-email invariant**: `counterparty_email` (and `blocked_senders.pattern`
   for senders) must always be a BARE email — never a raw `Name <email>` header.
   Centralized in `parseEmailAddress` (`src/lib/google-sync/identity.ts`, vendored
@@ -450,7 +480,7 @@ Symptom: connection pills show the name **twice** ("Tia Cummings-Hopkins Tia Cum
 ## Testing & Quality
 - **Test runner**: Vitest (`npm test`) — runs vendored-drift check first, then all unit tests
 - **Test files**: `src/lib/google-sync/__tests__/` — covers followup rules, HMAC snooze tokens, identity matching, crypto, calendar/gmail sync, settings validation
-- **39 tests** as of 2026-06-04
+- **67 tests** as of 2026-08-19
 
 ### PostgREST Filter Injection — API Route Pattern
 When building `.or()` filter strings with user input, always strip metacharacters first:

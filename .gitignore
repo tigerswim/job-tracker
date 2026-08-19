@@ -52,3 +52,6 @@ next-env.d.ts
 
 # Git worktrees
 .worktrees/
+
+# Supabase CLI scratch
+supabase/.temp/
