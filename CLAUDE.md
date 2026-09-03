@@ -16,7 +16,8 @@ job-tracker is a **standalone repository** for a job application and contact man
 - `npm run dev` - Start development server (port 3001)
 - `npm run build` - Build production version
 - `npm start` - Start production server
-- `npm run lint` - Run ESLint (note: currently ignores build errors via next.config.js)
+- `npm run lint` - Run ESLint (not a build gate; see `next.config.ts`)
+- `npm run typecheck` - Run `tsc --noEmit`. Type errors DO fail `npm run build`.
 
 ### Environment Setup
 Ensure `.env.local` contains required Supabase credentials:
@@ -66,8 +67,12 @@ Core tables managed via Supabase:
 ### Authentication & Authorization
 - Supabase middleware (`middleware.ts`) handles session refresh
 - Row Level Security (RLS) enforced via `user_id` field on all tables
-- Client-side auth state managed via `@supabase/auth-helpers-nextjs`
-- API routes use `createRouteHandlerClient` for server-side auth
+- Auth clients live in `src/lib/supabase-ssr/`: `client.ts` (browser,
+  `createClient()`) and `server.ts` (`createRouteClient()` for Route Handlers).
+  Built on `@supabase/ssr`; the old `@supabase/auth-helpers-nextjs` is
+  deprecated and has been removed.
+- `middleware.ts` authorizes on `getUser()` (revalidates the token with
+  Supabase), never `getSession()` (which only decodes the cookie).
 
 ## Key Components
 
@@ -108,7 +113,7 @@ All API routes follow consistent patterns:
   - Historical data preserved in `notes` field with timestamps
   - Old experience/education entries archived in JSON format
   - User-entered notes preserved after historical data
-- **Authentication**: API key-based (`x-api-key` header with `N8N_API_KEY` env var)
+- **Authentication**: API key-based (`x-api-key` header with `N8N_API_KEY` env var), compared in constant time via `secretsMatch` in `src/lib/api-auth.ts`
 - **Cost**: ~$0.02-0.03 per resume (Claude API for data extraction)
 - **Workflow**: PDF → pdfjs-dist extraction → Claude API → POST to endpoint → Move to processed folder
 
@@ -419,6 +424,23 @@ Additional runtime and load-time improvements:
 ### Bug Fixes (2026-03)
 - **Mutual connection link/suggest fix** (`src/components/ContactList.tsx`): Added separate `allContacts` state holding the full unfiltered contact list. Previously `contactNameMap` and the `allContacts` prop to `ContactForm` were built from the search-filtered `contacts` state — when searching for a specific contact, only that contact was in the list, so mutual connection names couldn't be resolved (no blue clickable links) and the auto-suggest dropdown showed no results. Now both use the full list, which is populated on initial load and refreshed after saves/deletes.
 
+### Chrome Extension — Authentication
+All four extension endpoints authenticate with the user's Supabase access token
+(`Authorization: Bearer <token>`), verified via `authenticateBearer`
+(`src/lib/api-auth.ts`), which returns a client bound to that token so queries
+run under RLS as that user.
+
+Previously `lookup-contact` and `sync-connections` used a static
+`EXTENSION_API_KEY` plus the service-role key (RLS bypassed) and resolved the
+tenant from a hardcoded `N8N_DEFAULT_USER_ID` — the shared key was effectively
+the identity. That key, its settings UI, and the `extension_api_key` storage
+entry have all been removed; the extension reads the session token it already
+stores. CORS on these routes is scoped to `https://www.linkedin.com`.
+
+Service-role usage is now limited to two justified cases: the HMAC-signed
+snooze link (no user session exists on an email click) and the n8n endpoint
+(server-to-server).
+
 ### Chrome Extension — LinkedIn DOM Changes (2026-03)
 LinkedIn migrated to **fully obfuscated CSS class names** (e.g. `_486a7ca9`). All prior selector-based scraping broke. Files affected: `extension/content/profile.js`.
 
@@ -479,12 +501,18 @@ Symptom: connection pills show the name **twice** ("Tia Cummings-Hopkins Tia Cum
 
 ## Testing & Quality
 - **Test runner**: Vitest (`npm test`) — runs vendored-drift check first, then all unit tests
-- **Test files**: `src/lib/google-sync/__tests__/` — covers followup rules, HMAC snooze tokens, identity matching, crypto, calendar/gmail sync, settings validation
-- **67 tests** as of 2026-08-19
+- **Test files**: `src/lib/google-sync/__tests__/` — covers followup rules, HMAC snooze tokens, identity matching, crypto, calendar/gmail sync, settings validation; `src/lib/__tests__/` — filter sanitization, constant-time secret compare
+- **`npm test` also runs `tsc --noEmit`** — type errors fail the suite
+- **77 tests** as of 2026-09-03
 
 ### PostgREST Filter Injection — API Route Pattern
-When building `.or()` filter strings with user input, always strip metacharacters first:
+When building `.or()` filter strings with user input, always strip metacharacters first
+using the shared helper (do NOT re-inline the regex):
 ```typescript
-const safe = term.replace(/[,()"\\*%]/g, '')
+import { sanitizeFilterValue } from '@/lib/sanitize'
+const safe = sanitizeFilterValue(term)
 ```
+`src/lib/sanitize.ts` has no node builtins, so it is safe to import from client
+components; `src/lib/api-auth.ts` (server-only) holds `authenticateBearer` and
+the constant-time `secretsMatch`. Covered by `src/lib/__tests__/sanitize.test.ts`.
 Never interpolate raw user input into `.or()` filter strings — commas, parens, and quotes can escape the filter and inject arbitrary PostgREST conditions. Use `.in()` for exact-match multi-value lookups instead of `.or()` string building.

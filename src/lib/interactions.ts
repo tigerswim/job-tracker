@@ -1,6 +1,7 @@
 // src/lib/interactions.ts - Fixed version with proper supabase client initialization
 import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 import { Interaction } from './supabase'
+import { sanitizeFilterValue } from '@/lib/sanitize'
 
 export interface InteractionSearchResult extends Interaction {
   contact_name: string
@@ -425,7 +426,8 @@ export async function searchInteractions(searchTerm: string): Promise<Interactio
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
 
-    const term = searchTerm.trim()
+    // Strip PostgREST filter metacharacters before interpolation (CLAUDE.md).
+    const term = sanitizeFilterValue(searchTerm.trim())
 
     interface SearchRow {
       id: string

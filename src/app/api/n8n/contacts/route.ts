@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { secretsMatch } from '@/lib/api-auth'
 
-// Validate API key from header
+// Validate API key from header.
+// n8n is server-to-server (no user session), so a shared secret is the right
+// mechanism here — but it must be compared in constant time.
 function validateApiKey(request: NextRequest): boolean {
-  const apiKey = request.headers.get('x-api-key')
   const validApiKey = process.env.N8N_API_KEY
-  
+
   if (!validApiKey) {
     console.error('N8N_API_KEY not configured in environment variables')
     return false
   }
-  
-  return apiKey === validApiKey
+
+  return secretsMatch(request.headers.get('x-api-key'), validApiKey)
 }
 
 // Transform experience data from snake_case to camelCase
@@ -187,7 +189,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Log the update
-      console.log(`[n8n] Contact updated: ${updatedContact.name} (${updatedContact.company}) - ID: ${updatedContact.id}`)
+      console.log(`[n8n] Contact updated: ${updatedContact.id}`)
 
       return NextResponse.json(
         {
@@ -221,7 +223,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the import
-    console.log(`[n8n] Contact created: ${newContact.name} (${newContact.company}) - ID: ${newContact.id}`)
+    console.log(`[n8n] Contact created: ${newContact.id}`)
 
     return NextResponse.json(
       {

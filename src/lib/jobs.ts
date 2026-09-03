@@ -2,6 +2,7 @@
 import { Contact } from './supabase'
 import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 import { Job } from './supabase'
+import { sanitizeFilterValue } from '@/lib/sanitize'
 
 /** Zeroed counts for every job status. Keep in sync with the JobStatus union. */
 function emptyStatusCounts(): Record<Job['status'], number> {
@@ -90,7 +91,8 @@ export async function searchJobs(options: JobSearchOptions = {}): Promise<JobsRe
 
     // Add search filtering if search term provided
     if (searchTerm.trim()) {
-      const term = searchTerm.trim()
+      // Strip PostgREST filter metacharacters before interpolation (CLAUDE.md).
+      const term = sanitizeFilterValue(searchTerm.trim())
       query = query.or(`
         job_title.ilike.%${term}%,
         company.ilike.%${term}%,

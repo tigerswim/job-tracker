@@ -1,27 +1,22 @@
-// API endpoint to look up a contact by LinkedIn URL
-// Uses API key authentication for the Chrome extension
+// API endpoint to look up a contact by LinkedIn URL.
+// Authenticates with the extension user's Supabase access token (Bearer).
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const extensionApiKey = process.env.EXTENSION_API_KEY
-
-// Default user ID for extension operations (same as n8n)
-const defaultUserId = process.env.N8N_DEFAULT_USER_ID
+import { authenticateBearer } from '@/lib/api-auth'
+import { sanitizeFilterValue } from '@/lib/sanitize'
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key
-    const apiKey = request.headers.get('x-api-key')
-
-    if (!apiKey || apiKey !== extensionApiKey) {
-      return NextResponse.json(
-        { found: false, error: 'Invalid or missing API key' },
-        { status: 401 }
-      )
+    // Authenticate as the signed-in user. Previously this used a static
+    // x-api-key plus the service-role key (RLS bypassed) and resolved the
+    // tenant from a hardcoded N8N_DEFAULT_USER_ID, so the shared key was
+    // effectively the identity. Now the caller's own token is the identity
+    // and every query runs under RLS.
+    const auth = await authenticateBearer(request)
+    if (!auth.ok) {
+      return NextResponse.json({ found: false, error: auth.error }, { status: auth.status })
     }
+    const { supabase, userId } = auth
 
     // Parse request body
     const body = await request.json()
@@ -38,21 +33,17 @@ export async function POST(request: NextRequest) {
     const normalizedUrl = normalizeLinkedInUrl(linkedin_url)
     const username = extractUsername(linkedin_url)
 
-    console.log('[Lookup Contact] Input URL:', linkedin_url)
-    console.log('[Lookup Contact] Normalized URL:', normalizedUrl)
-    console.log('[Lookup Contact] Extracted username:', username)
-    console.log('[Lookup Contact] User ID:', defaultUserId)
-
-    // Create Supabase client with service role key (bypasses RLS)
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    // PostgREST filter metacharacters must be stripped before interpolation.
+    const safeUsername = sanitizeFilterValue(username)
+    const safeNormalizedUrl = sanitizeFilterValue(normalizedUrl)
 
     // Look up contact by LinkedIn URL with multiple matching strategies
     // Try exact username match first (most reliable)
     let { data: contact, error } = await supabase
       .from('contacts')
       .select('id, name, job_title, company, linkedin_url, mutual_connections')
-      .eq('user_id', defaultUserId)
-      .ilike('linkedin_url', `%${username}%`)
+      .eq('user_id', userId)
+      .ilike('linkedin_url', `%${safeUsername}%`)
       .limit(1)
       .single()
 
@@ -61,8 +52,8 @@ export async function POST(request: NextRequest) {
       const result = await supabase
         .from('contacts')
         .select('id, name, job_title, company, linkedin_url, mutual_connections')
-        .eq('user_id', defaultUserId)
-        .ilike('linkedin_url', `%${normalizedUrl}%`)
+        .eq('user_id', userId)
+        .ilike('linkedin_url', `%${safeNormalizedUrl}%`)
         .limit(1)
         .single()
 
@@ -75,8 +66,8 @@ export async function POST(request: NextRequest) {
       const result = await supabase
         .from('contacts')
         .select('id, name, job_title, company, linkedin_url, mutual_connections')
-        .eq('user_id', defaultUserId)
-        .or(`linkedin_url.ilike.%${username},linkedin_url.eq.${username}`)
+        .eq('user_id', userId)
+        .or(`linkedin_url.ilike.%${safeUsername},linkedin_url.eq.${safeUsername}`)
         .limit(1)
         .single()
 
@@ -84,7 +75,6 @@ export async function POST(request: NextRequest) {
       error = result.error
     }
 
-    console.log('[Lookup Contact] Query result:', { found: !!contact, error: error?.code })
 
     if (error && error.code !== 'PGRST116') {
       // PGRST116 = no rows returned (not an error for us)
@@ -159,9 +149,12 @@ export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      // Content scripts run on LinkedIn pages, so the browser sends that
+      // origin. Scoped rather than '*' so arbitrary sites cannot preflight.
+      'Access-Control-Allow-Origin': 'https://www.linkedin.com',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Vary': 'Origin',
     },
   })
 }

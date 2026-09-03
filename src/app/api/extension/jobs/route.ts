@@ -70,7 +70,6 @@ export async function POST(request: NextRequest) {
       user_id: user.id
     }
 
-    console.log('Extension API: Inserting job:', insertData.job_title)
 
     // Insert job into database
     const { data, error } = await supabase

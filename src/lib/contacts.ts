@@ -1,6 +1,7 @@
 // src/lib/contacts.ts - Fixed Version with Consistent Client Usage
 import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 import { Contact } from './supabase'
+import { sanitizeFilterValue } from '@/lib/sanitize'
 
 export interface ContactsResponse {
   contacts: Contact[]
@@ -101,7 +102,8 @@ export async function searchContacts(options: ContactSearchOptions = {}): Promis
       .eq('user_id', user.id)
 
     if (searchTerm.trim()) {
-      const term = searchTerm.trim()
+      // Strip PostgREST filter metacharacters before interpolation (CLAUDE.md).
+      const term = sanitizeFilterValue(searchTerm.trim())
       query = query.or(`name.ilike.%${term}%,company.ilike.%${term}%,job_title.ilike.%${term}%,email.ilike.%${term}%,current_location.ilike.%${term}%,notes.ilike.%${term}%`)
     }
 
