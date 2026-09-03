@@ -75,7 +75,7 @@ export default function JobPipelineChart({
           contentStyle={CHART_THEME.tooltip.contentStyle}
           labelStyle={CHART_THEME.tooltip.labelStyle}
           itemStyle={CHART_THEME.tooltip.itemStyle}
-          formatter={(value: number) => [value, 'Jobs Added']}
+          formatter={(value?: number) => [value ?? 0, 'Jobs Added']}
         />
 
         <Area

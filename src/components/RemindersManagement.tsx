@@ -22,7 +22,7 @@ import ReminderDetailsModal from '@/components/ReminderDetailsModal'
 import { Contact, Job } from '@/lib/supabase'
 import { getContacts } from '@/lib/contacts'
 import { fetchJobs } from '@/lib/jobs'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 
 interface RemindersState {
   reminders: ReminderWithContext[]
@@ -34,25 +34,17 @@ interface RemindersState {
 
 // Helper function to convert ReminderWithContext to Reminder for editing
 const reminderToReminderWithType = (reminder: ReminderWithContext): Reminder => {
+  // Both types extend EmailReminder, so spread the row and derive `type`.
+  // The previous field-by-field copy dropped user_id and email_body.
   return {
-    id: reminder.id,
+    ...reminder,
     type: reminder.contact_id ? 'contact' : reminder.job_id ? 'job' : 'general',
-    contact_id: reminder.contact_id || undefined,
-    job_id: reminder.job_id || undefined,
-    scheduled_time: reminder.scheduled_time,
-    user_timezone: reminder.user_timezone,
-    email_subject: reminder.email_subject,
-    user_message: reminder.user_message,
-    status: reminder.status,
-    created_at: reminder.created_at,
-    sent_at: reminder.sent_at,
-    error_message: reminder.error_message
   }
 }
 
 export default function RemindersManagement() {
-  // Initialize Supabase client using createClientComponentClient
-  const supabase = createClientComponentClient()
+  // Initialize the browser Supabase client
+  const supabase = createSupabaseBrowserClient()
 
   // -------------------------
   // Simplified state management
@@ -735,7 +727,13 @@ export default function RemindersManagement() {
           isOpen={showCreateModal || isEditModalOpen}
           onClose={handleModalClose}
           onSuccess={handleModalSuccess}
-          editingReminder={selectedReminder}
+          editingReminder={
+            selectedReminder
+              ? 'type' in selectedReminder
+                ? selectedReminder
+                : reminderToReminderWithType(selectedReminder)
+              : null
+          }
           contacts={contacts}
           jobs={jobs}
         />

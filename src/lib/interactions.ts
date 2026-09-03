@@ -1,5 +1,5 @@
 // src/lib/interactions.ts - Fixed version with proper supabase client initialization
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 import { Interaction } from './supabase'
 
 export interface InteractionSearchResult extends Interaction {
@@ -35,10 +35,10 @@ export async function getInteractions(contactId: string): Promise<Interaction[]>
     console.log('Fetching fresh interactions for contact:', contactId)
     
     // Use select with specific fields to reduce data transfer
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
       .from('interactions')
-      .select('id, type, date, summary, notes, contact_id, created_at, updated_at')
+      .select('id, type, date, summary, notes, contact_id, user_id, created_at, updated_at')
       .eq('contact_id', contactId)
       .order('date', { ascending: false })
 
@@ -72,7 +72,7 @@ export async function getInteractionCount(contactId: string): Promise<number> {
   if (!contactId) return 0
 
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     // Use count query which is more efficient than fetching all data
     const { count, error } = await supabase
       .from('interactions')
@@ -96,7 +96,7 @@ export async function getInteractionCounts(contactIds: string[]): Promise<Record
   if (!contactIds.length) return {}
 
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
       .from('interactions')
       .select('contact_id')
@@ -126,7 +126,7 @@ export async function getInteractionCounts(contactIds: string[]): Promise<Record
 
 // Fixed createInteraction function with proper supabase client initialization
 export async function createInteraction(
-  interactionData: Omit<Interaction, 'id' | 'created_at' | 'updated_at'>
+  interactionData: Omit<Interaction, 'id' | 'created_at' | 'updated_at' | 'user_id'>
 ): Promise<Interaction | null> {
   console.log('=== CREATE INTERACTION DEBUG ===')
   console.log('NODE_ENV:', process.env.NODE_ENV)
@@ -136,7 +136,7 @@ export async function createInteraction(
   
   try {
     // Initialize supabase client properly
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     console.log('Supabase client initialized successfully')
     
     // Check current user
@@ -230,7 +230,7 @@ export async function updateInteraction(
 
     console.log('Updating interaction:', id, interactionData)
 
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
       .from('interactions')
       .update({ 
@@ -265,7 +265,7 @@ export async function deleteInteraction(id: string): Promise<boolean> {
       return false
     }
 
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     // First get the contact_id for cache clearing
     const { data: interaction } = await supabase
       .from('interactions')
@@ -300,7 +300,7 @@ export async function deleteInteractions(ids: string[]): Promise<boolean> {
   if (!ids.length) return true
 
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     // First get all contact_ids for cache clearing
     const { data: interactions } = await supabase
       .from('interactions')
@@ -335,7 +335,7 @@ export async function deleteInteractions(ids: string[]): Promise<boolean> {
 // Get recent interactions across all contacts (for dashboard)
 export async function getAllInteractions(): Promise<Interaction[]> {
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
 
@@ -359,7 +359,7 @@ export async function getAllInteractions(): Promise<Interaction[]> {
 
 export async function getRecentInteractions(limit: number = 10): Promise<Interaction[]> {
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
 
@@ -421,7 +421,7 @@ export async function searchInteractions(searchTerm: string): Promise<Interactio
   if (!searchTerm.trim()) return []
 
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
 
@@ -437,10 +437,12 @@ export async function searchInteractions(searchTerm: string): Promise<Interactio
       user_id: string
       created_at: string
       updated_at: string
+      // PostgREST returns embedded relations as an array, even for a
+      // to-one join, so this is typed as one and read via [0] below.
       contacts: {
         name: string
         company: string | null
-      }
+      }[] | null
     }
 
     const selectFields = `
@@ -490,15 +492,15 @@ export async function searchInteractions(searchTerm: string): Promise<Interactio
     return data.map((row: SearchRow) => ({
       id: row.id,
       contact_id: row.contact_id,
-      type: row.type,
+      type: row.type as Interaction['type'],
       date: row.date,
       summary: row.summary,
       notes: row.notes ?? undefined,
       user_id: row.user_id,
       created_at: row.created_at,
       updated_at: row.updated_at,
-      contact_name: row.contacts?.name || '',
-      contact_company: row.contacts?.company ?? null,
+      contact_name: row.contacts?.[0]?.name || '',
+      contact_company: row.contacts?.[0]?.company ?? null,
     }))
   } catch (error) {
     console.error('Exception in searchInteractions:', error)

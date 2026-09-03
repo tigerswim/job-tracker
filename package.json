@@ -9,16 +9,15 @@
     "lint": "next lint",
     "export": "next build",
     "dev:server": "next dev",
-    "test": "bash scripts/check-vendored-sync.sh && vitest run",
+    "test": "bash scripts/check-vendored-sync.sh && tsc --noEmit && vitest run",
     "test:watch": "vitest",
     "check:vendored": "bash scripts/check-vendored-sync.sh",
-    "oauth:setup": "npx tsx scripts/google-oauth-setup.ts"
+    "oauth:setup": "npx tsx scripts/google-oauth-setup.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",
-    "@supabase/auth-helpers-nextjs": "^0.10.0",
-    "@supabase/auth-ui-react": "^0.4.7",
-    "@supabase/auth-ui-shared": "^0.1.8",
+    "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.55.0",
     "@tanstack/react-query": "^5.62.0",
     "dotenv": "^17.4.1",

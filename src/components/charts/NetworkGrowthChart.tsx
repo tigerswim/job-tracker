@@ -75,7 +75,7 @@ export default function NetworkGrowthChart({
           contentStyle={CHART_THEME.tooltip.contentStyle}
           labelStyle={CHART_THEME.tooltip.labelStyle}
           itemStyle={CHART_THEME.tooltip.itemStyle}
-          formatter={(value: number) => [value, 'Contacts Added']}
+          formatter={(value?: number) => [value ?? 0, 'Contacts Added']}
         />
 
         <Area

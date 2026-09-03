@@ -18,7 +18,7 @@ import {
 
 interface InteractionFormProps {
   contactId: string
-  interaction?: Interaction
+  interaction?: Interaction | null
   onSuccess: () => void
   onCancel: () => void
 }
@@ -101,9 +101,8 @@ const TypeSelector = memo(({
         >
           <div className="flex items-center space-x-2 mb-1">
             <Icon className="w-4 h-4 flex-shrink-0" />
-            <span className="font-medium text-xs truncate">{type.label}</span>
+            <span className="font-medium text-xs truncate">{type.description}</span>
           </div>
-          <div className="text-xs opacity-75 line-clamp-2 leading-tight">{type.description}</div>
         </button>
       )
     })}

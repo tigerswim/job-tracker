@@ -1,17 +1,14 @@
 
 // src/app/api/reminders/stats/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createRouteClient } from '@/lib/supabase-ssr/server'
 
 // Helper function to get authenticated user (simplified for middleware)
 async function getAuthenticatedUser(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient({
-      cookies: () => cookieStore
-    })
-    
+    const supabase = await createRouteClient()
+
+
     const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error) {

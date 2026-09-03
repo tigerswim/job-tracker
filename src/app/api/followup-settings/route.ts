@@ -1,12 +1,10 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createRouteClient } from '@/lib/supabase-ssr/server'
 import { NextResponse } from 'next/server'
 import { validateFollowupSettings } from '@/lib/google-sync/settings-validation'
 import { DEFAULT_FOLLOWUP_SETTINGS } from '@/lib/google-sync/types'
 
 export async function GET() {
-  const cookieStore = await cookies()
-  const supa = createRouteHandlerClient({ cookies: () => cookieStore })
+  const supa = await createRouteClient()
   const { data: { user } } = await supa.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { data } = await supa.from('followup_settings')
@@ -15,8 +13,7 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
-  const cookieStore = await cookies()
-  const supa = createRouteHandlerClient({ cookies: () => cookieStore })
+  const supa = await createRouteClient()
   const { data: { user } } = await supa.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json()

@@ -802,7 +802,7 @@ export default function JobList({ initialJobId }: { initialJobId?: string | null
           break
         case 'salary':
           // Extract numeric value from salary string for proper sorting
-          const extractSalaryNumber = (salary: string | null) => {
+          const extractSalaryNumber = (salary?: string | null) => {
             if (!salary) return 0
             const match = salary.match(/[\d,]+/)
             if (!match) return 0
@@ -935,17 +935,9 @@ export default function JobList({ initialJobId }: { initialJobId?: string | null
     }
     if (cachedJobs) {
       setState(prev => ({ ...prev, jobs: cachedJobs, loading: false, error: null }))
-      setJobs(cachedJobs.map(j => ({
-        id: j.id,
-        job_title: j.job_title,
-        company: j.company,
-        status: j.status,
-        location: j.location,
-        salary: j.salary,
-        notes: j.notes,
-        created_at: j.created_at,
-        updated_at: j.updated_at
-      })))
+      // cachedJobs are already full Job rows; the previous field-by-field copy
+      // silently dropped user_id (and any column added later).
+      setJobs(cachedJobs)
     }
   }, [cachedJobs, jobsLoading, jobsError])
 

@@ -98,9 +98,9 @@ export default function InteractionFrequencyChart({
           contentStyle={CHART_THEME.tooltip.contentStyle}
           labelStyle={CHART_THEME.tooltip.labelStyle}
           itemStyle={CHART_THEME.tooltip.itemStyle}
-          formatter={(value: number, name: string) => [
-            value,
-            INTERACTION_TYPE_LABELS[name] || name,
+          formatter={(value?: number, name?: string) => [
+            value ?? 0,
+            (name && INTERACTION_TYPE_LABELS[name]) || name || '',
           ]}
         />
 

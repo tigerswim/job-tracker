@@ -4,12 +4,12 @@
 'use client'
 
 import { useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 
 export default function ExtensionAuthSync() {
   useEffect(() => {
     // Create Supabase client once and reuse it (prevents memory leak)
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
 
     const syncAuthWithExtension = async () => {
       try {

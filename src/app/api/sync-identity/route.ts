@@ -1,10 +1,8 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createRouteClient } from '@/lib/supabase-ssr/server'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const cookieStore = await cookies()
-  const supa = createRouteHandlerClient({ cookies: () => cookieStore })
+  const supa = await createRouteClient()
   const { data: { user } } = await supa.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { data } = await supa.from('sync_identity')
@@ -13,8 +11,7 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
-  const cookieStore = await cookies()
-  const supa = createRouteHandlerClient({ cookies: () => cookieStore })
+  const supa = await createRouteClient()
   const { data: { user } } = await supa.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { emails } = await req.json() as { emails: string[] }

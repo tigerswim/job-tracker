@@ -1,24 +1,39 @@
-// middleware.ts (place in root directory)
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  
-  // Create a Supabase client configured to use cookies
-  const supabase = createMiddlewareClient({ req, res })
-  
-  // Refresh session if expired - required for Server Components
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  // If the request is for an API route that requires auth, ensure user is authenticated
-  if (req.nextUrl.pathname.startsWith('/api/reminders')) {
-    if (!session?.user) {
-      console.log('Middleware: No session found for API request')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  let res = NextResponse.next({ request: req })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          // Write refreshed cookies onto both the request (so downstream
+          // handlers in this pass see them) and the response (so the browser
+          // stores them).
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
+          res = NextResponse.next({ request: req })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options)
+          )
+        },
+      },
     }
-    console.log('Middleware: Session found for user:', session.user.id)
+  )
+
+  // getUser() revalidates the token with Supabase; getSession() only decodes
+  // the cookie and is not safe to authorize on. Also refreshes expired
+  // sessions for Server Components.
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (req.nextUrl.pathname.startsWith('/api/reminders') && !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   return res

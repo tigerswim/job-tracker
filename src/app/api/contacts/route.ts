@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteClient } from '@/lib/supabase-ssr/server'
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
@@ -8,7 +7,7 @@ export async function GET(request: NextRequest) {
   const limit = parseInt(url.searchParams.get('limit') ?? '50', 10)
   const searchTerm = url.searchParams.get('search') ?? ''
 
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabase = await createRouteClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()

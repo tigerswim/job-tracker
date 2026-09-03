@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { Briefcase, Building, MapPin, DollarSign, FileText, Target, ClipboardList, ExternalLink, X } from "lucide-react";
 import { createJob, updateJob, Job } from "@/lib/jobs";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'; // Changed this import
+import type { JobStatus } from "@/lib/supabase";
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client' // Changed this import
 
 const BLANK = {
   company: "",
   job_title: "",
-  status: "bookmarked" as const,
+  status: "bookmarked" as JobStatus,
   salary: "",
   location: "",
   job_url: "",
@@ -153,7 +154,7 @@ export default function JobForm({ job: editingJob, onJobAdded, onCancel }: JobFo
 
     try {
       // Use the same Supabase client as jobs.ts
-      const supabase = createClientComponentClient();
+      const supabase = createSupabaseBrowserClient();
       
       console.log('Getting user authentication...');
       const { data: { user }, error: userError } = await supabase.auth.getUser();
