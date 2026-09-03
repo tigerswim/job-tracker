@@ -8,7 +8,7 @@ job-tracker is a **standalone repository** for a job application and contact man
 
 - **Repository**: `https://github.com/tigerswim/job-tracker.git`
 - **Deployment**: Netlify (https://job-tracker.kineticbrandpartners.com)
-- **Tech Stack**: Next.js 15.5.7, React 19, TypeScript, Tailwind CSS 4, Supabase
+- **Tech Stack**: Next.js 15.5.25, React 19, TypeScript, Tailwind CSS 4, Supabase
 
 ## Development Commands
 
@@ -398,6 +398,21 @@ follow-up reminders.
 - Form fields use controlled components with real-time validation
 - Date pickers with month/year selectors for experience and education
 - Array fields (experience, education, mutual connections) support dynamic add/remove
+
+## Dependency Security
+
+`npm audit` must stay at **0 vulnerabilities**. Two transitive packages are held
+forward with `overrides` in `package.json` because the parent pins a vulnerable
+range:
+
+- `sharp` `^0.35.4` — Next pins 0.34.3 (libvips CVE-2026-33327/33328/35590/35591).
+- `postcss` `^8.5.28` — Next pins 8.4.31 (path traversal, GHSA-r28c-9q8g-f849).
+  npm requires an override to satisfy the direct dependency too, so the
+  devDependency is pinned to the same range; bump both together.
+
+Drop an override once Next's own floor moves past it. Next itself must stay
+current within 15.5.x — 15.5.15 carried an SSRF, an image-optimization DoS, and
+an unauthenticated Server Function disclosure, all fixed by 15.5.25.
 
 ## Configuration Notes
 
