@@ -516,9 +516,31 @@ Symptom: connection pills show the name **twice** ("Tia Cummings-Hopkins Tia Cum
 
 ## Testing & Quality
 - **Test runner**: Vitest (`npm test`) — runs vendored-drift check first, then all unit tests
-- **Test files**: `src/lib/google-sync/__tests__/` — covers followup rules, HMAC snooze tokens, identity matching, crypto, calendar/gmail sync, settings validation; `src/lib/__tests__/` — filter sanitization, constant-time secret compare
+- **Test files**:
+  - `src/lib/google-sync/__tests__/` — followup rules, HMAC snooze tokens, identity matching, crypto, calendar/gmail sync, settings validation
+  - `src/lib/__tests__/` — filter sanitization, constant-time secret compare
+  - `src/app/api/__tests__/` — authorization gates for all 20 route handlers
 - **`npm test` also runs `tsc --noEmit`** — type errors fail the suite
-- **77 tests** as of 2026-09-03
+- **146 tests** as of 2026-09-04
+
+### API Route Authorization Tests
+`src/app/api/__tests__/` covers every non-OPTIONS handler, split by auth
+mechanism: `auth-cookie-routes` (session), `auth-bearer-routes` (extension
+tokens), `auth-secret-routes` (n8n shared key, HMAC snooze links).
+
+Two things make these worth keeping:
+
+1. **They assert no DB access, not just a status code.** The mock in
+   `helpers/supabase-mock.ts` records every `.from()` chain, and the tests
+   assert that list is empty for an unauthenticated call — a handler that
+   returns 401 *after* querying has already leaked the row.
+2. **Only `/api/reminders/*` is covered by `middleware.ts`.** Every other
+   route defends itself, so an omitted check is invisible until these tests
+   catch it.
+
+When adding a route, add it to the matching table in the relevant file. The
+mock returns empty results and is not a database — these tests verify the gate,
+not query behavior.
 
 ### PostgREST Filter Injection — API Route Pattern
 When building `.or()` filter strings with user input, always strip metacharacters first
