@@ -310,7 +310,8 @@ export function parseCSVForDataType(csvText: string, dataType: 'jobs' | 'contact
     let hasRequiredFields = false
     
     headers.forEach((header, index) => {
-      let value = values[index] ? values[index].trim() : ''
+      // Widened: CSV cells are normalized to null (empty) or boolean below.
+      let value: string | boolean | null = values[index] ? values[index].trim() : ''
       
       // Convert empty strings and null-like values to appropriate defaults
       if (value === '' || value === 'null' || value === 'NULL' || value === 'undefined') {

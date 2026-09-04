@@ -34,7 +34,7 @@ export function normalizeEvent(
     externalId,
     lastMessageId: null,
     counterpartyEmail: cp,
-    type: (isVideo ? 'video_call' : 'meeting') as const,
+    type: isVideo ? ('video_call' as const) : ('meeting' as const),
     occurredAt: at,
     summary: ev.summary ?? '(no title)',
     notes: `Calendar: ${ev.summary ?? '(no title)'}\nAttendees: ${externals.join(', ')}`,

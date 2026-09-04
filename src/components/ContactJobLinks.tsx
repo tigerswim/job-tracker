@@ -3,22 +3,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getContactJobs } from '@/lib/jobContacts'
+import { getContactJobs, type LinkedJob } from '@/lib/jobContacts'
 import { Briefcase, ExternalLink } from 'lucide-react'
-
-interface Job {
-  id: string
-  job_title: string
-  company: string
-  status: string
-  location: string
-}
 
 interface ContactJobLinksProps {
   contactId: string
   compact?: boolean
   onJobClick?: (jobId: string) => void
-  prefetchedJobs?: Job[]
+  prefetchedJobs?: LinkedJob[]
 }
 
 export default function ContactJobLinks({
@@ -27,7 +19,7 @@ export default function ContactJobLinks({
   onJobClick,
   prefetchedJobs
 }: ContactJobLinksProps) {
-  const [linkedJobs, setLinkedJobs] = useState<Job[]>([])
+  const [linkedJobs, setLinkedJobs] = useState<LinkedJob[]>([])
   const [loading, setLoading] = useState(false) // Changed to false initially
   const [hasCheckedJobs, setHasCheckedJobs] = useState(false)
 

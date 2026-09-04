@@ -1,13 +1,12 @@
 // src/app/api/reminders/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createRouteClient } from '@/lib/supabase-ssr/server'
 import { REMINDER_VALIDATION } from '@/lib/types/reminders'
 
 // Helper function to get authenticated user
 async function getAuthenticatedUser(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = await createRouteClient()
     
     // First try to get user from session
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -45,7 +44,7 @@ async function getAuthenticatedUser(request: NextRequest) {
 // PUT /api/reminders/[id] - Update reminder
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     console.log('PUT /api/reminders/[id] - Starting update request')
@@ -59,9 +58,9 @@ export async function PUT(
 
     console.log('Authenticated user:', user.id)
     
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = await createRouteClient()
     const body = await request.json()
-    const reminderId = params.id
+    const { id: reminderId } = await params
 
     console.log('Update request for reminder:', reminderId, 'by user:', user.id)
 
@@ -179,7 +178,7 @@ export async function PUT(
 // DELETE /api/reminders/[id] - Cancel/delete reminder
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     console.log('DELETE /api/reminders/[id] - Starting delete request')
@@ -193,8 +192,8 @@ export async function DELETE(
 
     console.log('Authenticated user:', user.id)
     
-    const supabase = createRouteHandlerClient({ cookies })
-    const reminderId = params.id
+    const supabase = await createRouteClient()
+    const { id: reminderId } = await params
 
     console.log('Delete request for reminder:', reminderId, 'by user:', user.id)
 

@@ -1,6 +1,7 @@
 // src/lib/contacts.ts - Fixed Version with Consistent Client Usage
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 import { Contact } from './supabase'
+import { sanitizeFilterValue } from '@/lib/sanitize'
 
 export interface ContactsResponse {
   contacts: Contact[]
@@ -19,7 +20,7 @@ export interface ContactSearchOptions {
 export async function getContacts(): Promise<Contact[]> {
   try {
     // Use the same client pattern throughout
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
     if (userError || !user) {
@@ -52,7 +53,7 @@ export async function getContactsLite(): Promise<Pick<Contact,
   'id' | 'name' | 'company' | 'job_title' | 'email' | 'phone' | 'current_location' | 'linkedin_url' | 'notes' | 'mutual_connections' | 'experience' | 'education' | 'created_at' | 'updated_at' | 'user_id' | 'followup_snoozed_until'
 >[]> {
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       console.error('Error getting user:', userError)
@@ -88,7 +89,7 @@ export async function searchContacts(options: ContactSearchOptions = {}): Promis
       sortOrder = 'desc'
     } = options
 
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       console.error('Error getting user:', userError)
@@ -101,7 +102,8 @@ export async function searchContacts(options: ContactSearchOptions = {}): Promis
       .eq('user_id', user.id)
 
     if (searchTerm.trim()) {
-      const term = searchTerm.trim()
+      // Strip PostgREST filter metacharacters before interpolation (CLAUDE.md).
+      const term = sanitizeFilterValue(searchTerm.trim())
       query = query.or(`name.ilike.%${term}%,company.ilike.%${term}%,job_title.ilike.%${term}%,email.ilike.%${term}%,current_location.ilike.%${term}%,notes.ilike.%${term}%`)
     }
 
@@ -129,7 +131,7 @@ export async function searchContacts(options: ContactSearchOptions = {}): Promis
 
 export async function getContactsBatch(offset: number = 0, limit: number = 50): Promise<ContactsResponse> {
   try {
-    const supabase = createClientComponentClient() // ✅ Fixed: Use consistent client
+    const supabase = createSupabaseBrowserClient() // ✅ Fixed: Use consistent client
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       console.error('Error getting user:', userError)
@@ -164,7 +166,7 @@ export async function getContactsBatch(offset: number = 0, limit: number = 50): 
 
 export async function getContactById(id: string): Promise<Contact | null> {
   try {
-    const supabase = createClientComponentClient() // ✅ Fixed: Use consistent client
+    const supabase = createSupabaseBrowserClient() // ✅ Fixed: Use consistent client
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       console.error('Error getting user:', userError)
@@ -194,7 +196,7 @@ export async function getContactsByIds(ids: string[]): Promise<Contact[]> {
   try {
     if (!ids || ids.length === 0) return []
 
-    const supabase = createClientComponentClient() // ✅ Fixed: Use consistent client
+    const supabase = createSupabaseBrowserClient() // ✅ Fixed: Use consistent client
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       console.error('Error getting user:', userError)
@@ -219,11 +221,11 @@ export async function getContactsByIds(ids: string[]): Promise<Contact[]> {
   }
 }
 
-export async function createContact(contact: Omit<Contact, 'id' | 'created_at' | 'updated_at'>): Promise<Contact | null> {
+export async function createContact(contact: Omit<Contact, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<Contact | null> {
   console.log('=== ENHANCED DEBUG: createContact started ===')
   
   try {
-    const supabase = createClientComponentClient() // ✅ Fixed: Use consistent client
+    const supabase = createSupabaseBrowserClient() // ✅ Fixed: Use consistent client
     
     // 1. Check user authentication
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -295,7 +297,7 @@ export async function createContact(contact: Omit<Contact, 'id' | 'created_at' |
 
 export async function updateContact(id: string, contactData: Partial<Omit<Contact, 'id' | 'created_at' | 'updated_at' | 'user_id'>>): Promise<Contact | null> {
   try {
-    const supabase = createClientComponentClient() // ✅ Fixed: Use consistent client
+    const supabase = createSupabaseBrowserClient() // ✅ Fixed: Use consistent client
     console.log('Updating contact with data:', contactData)
 
     const { data, error } = await supabase
@@ -323,7 +325,7 @@ export async function updateContact(id: string, contactData: Partial<Omit<Contac
 
 export async function deleteContact(id: string): Promise<boolean> {
   try {
-    const supabase = createClientComponentClient() // ✅ Fixed: Use consistent client
+    const supabase = createSupabaseBrowserClient() // ✅ Fixed: Use consistent client
     const { error } = await supabase
       .from('contacts')
       .delete()
@@ -350,7 +352,7 @@ export async function getContactStats(): Promise<{
   withJobs: number
 }> {
   try {
-    const supabase = createClientComponentClient() // ✅ Fixed: Use consistent client
+    const supabase = createSupabaseBrowserClient() // ✅ Fixed: Use consistent client
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       console.error('Error getting user:', userError)

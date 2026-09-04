@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Contact, Interaction, Job } from '@/lib/supabase'
 import { getJobs } from '@/lib/jobs'
 import { getContacts as fetchAllContacts } from '@/lib/contacts'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 import {
   BarChart3,
   Users,
@@ -54,18 +54,6 @@ export function ReportingPage() {
     </div>
   )
 }
-// Add these imports after your existing imports
-import type { 
-  ContactWithJobs, 
-  InteractionWithContact, 
-  ContactSortField, 
-  InteractionSortField, 
-  SortDirection, 
-  ContactStats, 
-  InteractionStats,
-  ReportingSection 
-} from '@/lib/types'
-
 
 /* ----------------------------- Types ---------------------------- */
 
@@ -166,7 +154,7 @@ async function rpcReportingContacts(params: {
     offset = 0
   } = params
 
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseBrowserClient()
   console.log('RPC reporting_contacts: Calling with user ID:', userId)
   const { data, error } = await supabase.rpc('reporting_contacts', {
     p_user_id: userId,
@@ -189,7 +177,7 @@ async function rpcReportingRecentInteractions(params: {
   limit?: number
 }): Promise<RPCRecentInteractionRow[]> {
   const { userId, limit = 100 } = params
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseBrowserClient()
   console.log('RPC reporting_recent_interactions: Calling with user ID:', userId)
   const { data, error } = await supabase.rpc('reporting_recent_interactions', {
     p_user_id: userId,
@@ -526,7 +514,7 @@ export default function Reporting() {
     let mounted = true
     async function loadReportingData() {
       setLoading(true)
-      const supabase = createClientComponentClient()
+      const supabase = createSupabaseBrowserClient()
       const { data: { user } } = await supabase.auth.getUser()
       console.log('Reporting: Loading data for user:', user?.id, 'email:', user?.email)
       if (!mounted || !user) { setLoading(false); return }

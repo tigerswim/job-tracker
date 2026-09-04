@@ -25,7 +25,7 @@ import {
 import ContactJobLinks from "./ContactJobLinks";
 
 interface ContactFormProps {
-  contact?: Contact;
+  contact?: Contact | null;
   onSuccess: () => void;
   onCancel: () => void;
   allContacts?: Contact[];
@@ -223,7 +223,7 @@ export default function ContactForm({
         (exp) =>
           exp.company.trim() ||
           exp.title.trim() ||
-          exp.description.trim() ||
+          exp.description?.trim() ||
           exp.start_date ||
           exp.end_date,
       );
@@ -465,7 +465,7 @@ export default function ContactForm({
             .filter((name) => name)
         : [];
 
-      const suggestions = allContacts
+      const suggestions = (allContacts ?? [])
         .map((c) => c.name)
         .filter((name) => {
           const nameLower = name.toLowerCase();
@@ -1577,11 +1577,13 @@ export default function ContactForm({
                 </div>
 
                 <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  {/* NOTE: `allowRemove` / `onLinksChanged` were passed here but
+                      ContactJobLinks never implemented either prop, so they were
+                      silently discarded. Removed to keep the call site honest —
+                      re-add once the component supports unlinking. */}
                   <ContactJobLinks
                     key={jobLinksKey}
                     contactId={contact.id}
-                    allowRemove={true}
-                    onLinksChanged={handleJobLinksChanged}
                   />
                 </div>
               </section>

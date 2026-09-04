@@ -2,7 +2,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 import { User } from '@supabase/supabase-js'
 import JobList from '@/components/JobList'
 import ContactList from '@/components/ContactList'
@@ -28,7 +28,7 @@ export default function HomeV2() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseBrowserClient()
 
   useEffect(() => {
     let mounted = true

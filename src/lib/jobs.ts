@@ -1,7 +1,24 @@
 // src/lib/jobs.ts - Job data operations
 import { Contact } from './supabase'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 import { Job } from './supabase'
+import { sanitizeFilterValue } from '@/lib/sanitize'
+
+/** Zeroed counts for every job status. Keep in sync with the JobStatus union. */
+function emptyStatusCounts(): Record<Job['status'], number> {
+  return {
+    bookmarked: 0,
+    interested: 0,
+    applied: 0,
+    interviewing: 0,
+    offered: 0,
+    onhold: 0,
+    withdrawn: 0,
+    rejected: 0,
+    noresponse: 0,
+  }
+}
+
 
 export interface JobsResponse {
   jobs: Job[]
@@ -20,7 +37,7 @@ export interface JobSearchOptions {
 
 export async function getJobs(): Promise<Job[]> {
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
     if (userError || !user) {
@@ -60,7 +77,7 @@ export async function searchJobs(options: JobSearchOptions = {}): Promise<JobsRe
       sortOrder = 'desc'
     } = options
 
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       console.error('Error getting user:', userError)
@@ -74,7 +91,8 @@ export async function searchJobs(options: JobSearchOptions = {}): Promise<JobsRe
 
     // Add search filtering if search term provided
     if (searchTerm.trim()) {
-      const term = searchTerm.trim()
+      // Strip PostgREST filter metacharacters before interpolation (CLAUDE.md).
+      const term = sanitizeFilterValue(searchTerm.trim())
       query = query.or(`
         job_title.ilike.%${term}%,
         company.ilike.%${term}%,
@@ -115,7 +133,7 @@ export async function searchJobs(options: JobSearchOptions = {}): Promise<JobsRe
 
 export async function getJobById(id: string): Promise<Job | null> {
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       console.error('Error getting user:', userError)
@@ -141,12 +159,12 @@ export async function getJobById(id: string): Promise<Job | null> {
   }
 }
 
-export async function createJob(job: Omit<Job, 'id' | 'created_at' | 'updated_at'>): Promise<Job | null> {
+export async function createJob(job: Omit<Job, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<Job | null> {
   console.log('=== DEBUG: createJob started ===')
   console.log('Job data received:', job)
   
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     
     // 1. Check user authentication with more detailed logging
     console.log('Getting user authentication...')
@@ -228,7 +246,7 @@ export async function updateJob(id: string, jobData: Partial<Omit<Job, 'id' | 'c
   console.log('Update data:', jobData)
   
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     
     // Check user authentication
     console.log('Getting user authentication...')
@@ -283,7 +301,7 @@ export async function updateJob(id: string, jobData: Partial<Omit<Job, 'id' | 'c
 // Alternative authentication check function
 export async function checkAuthStatus(): Promise<{ user: any | null, error: string | null }> {
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     
     console.log('=== AUTH DEBUG ===')
     
@@ -312,7 +330,7 @@ export async function checkAuthStatus(): Promise<{ user: any | null, error: stri
 
 export async function deleteJob(id: string): Promise<boolean> {
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     
     // Check user authentication
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -346,20 +364,13 @@ export async function getJobStats(): Promise<{
   withSalary: number
 }> {
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       console.error('Error getting user:', userError)
       return {
         total: 0,
-        byStatus: {
-          'interested': 0,
-          'applied': 0,
-          'interviewing': 0,
-          'onhold': 0,
-          'offered': 0,
-          'rejected': 0
-        },
+        byStatus: emptyStatusCounts(),
         recentlyApplied: 0,
         withSalary: 0
       }
@@ -374,14 +385,7 @@ export async function getJobStats(): Promise<{
       console.error('Error fetching job stats:', error)
       return {
         total: 0,
-        byStatus: {
-          'interested': 0,
-          'applied': 0,
-          'interviewing': 0,
-          'onhold': 0,
-          'offered': 0,
-          'rejected': 0
-        },
+        byStatus: emptyStatusCounts(),
         recentlyApplied: 0,
         withSalary: 0
       }
@@ -389,7 +393,8 @@ export async function getJobStats(): Promise<{
 
     const jobs = data || []
     const byStatus = jobs.reduce((acc, job) => {
-      acc[job.status] = (acc[job.status] || 0) + 1
+      const status = job.status as Job['status']
+      acc[status] = (acc[status] || 0) + 1
       return acc
     }, {} as Record<Job['status'], number>)
 
@@ -404,14 +409,10 @@ export async function getJobStats(): Promise<{
 
     return {
       total: jobs.length,
-      byStatus: {
-        'interested': byStatus['interested'] || 0,
-        'applied': byStatus['applied'] || 0,
-        'interviewing': byStatus['interviewing'] || 0,
-        'onhold': byStatus['onhold'] || 0,
-        'offered': byStatus['offered'] || 0,
-        'rejected': byStatus['rejected'] || 0
-      },
+      // Spread over the zeroed defaults so every status is present — the old
+      // literal listed only six and silently dropped bookmarked/withdrawn/
+      // noresponse counts.
+      byStatus: { ...emptyStatusCounts(), ...byStatus },
       recentlyApplied,
       withSalary
     }
@@ -419,14 +420,7 @@ export async function getJobStats(): Promise<{
     console.error('Exception in getJobStats:', error)
     return {
       total: 0,
-      byStatus: {
-        'interested': 0,
-        'applied': 0,
-        'interviewing': 0,
-        'onhold': 0,
-        'offered': 0,
-        'rejected': 0
-      },
+      byStatus: emptyStatusCounts(),
       recentlyApplied: 0,
       withSalary: 0
     }
@@ -463,8 +457,6 @@ export type { Job }
 
 // Add these functions to the end of your jobs.ts file
 
-import { Contact } from './supabase' // Make sure this import is at the top
-
 // Define JobWithContacts interface if not already defined elsewhere
 export interface JobWithContacts extends Job {
   contacts: Contact[]
@@ -473,7 +465,7 @@ export interface JobWithContacts extends Job {
 // Function to fetch jobs with their associated contacts
 export async function fetchJobsWithContacts(): Promise<JobWithContacts[]> {
   try {
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
     if (userError || !user) {

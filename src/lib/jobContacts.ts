@@ -1,6 +1,6 @@
 // src/lib/jobContacts.ts - Fixed version with proper error handling
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 
 export interface JobContact {
   id: string
@@ -9,6 +9,16 @@ export interface JobContact {
   user_id: string
   created_at: string
   updated_at: string
+}
+
+/** The contact columns selected by getJobContacts. */
+export interface LinkedContact {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  company: string | null
+  job_title: string | null
 }
 
 export interface LinkedJob {
@@ -25,7 +35,7 @@ export async function linkJobToContact(jobId: string, contactId: string): Promis
       throw new Error('Job ID and Contact ID are required')
     }
 
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError) {
       throw new Error(`Authentication error: ${userError.message}`)
@@ -80,7 +90,7 @@ export async function unlinkJobFromContact(jobId: string, contactId: string): Pr
       throw new Error('Job ID and Contact ID are required')
     }
 
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError) {
       throw new Error(`Authentication error: ${userError.message}`)
@@ -113,13 +123,13 @@ export async function unlinkJobFromContact(jobId: string, contactId: string): Pr
   }
 }
 
-export async function getJobContacts(jobId: string) {
+export async function getJobContacts(jobId: string): Promise<LinkedContact[]> {
   try {
     if (!jobId || jobId.trim() === '') {
       throw new Error('Job ID is required')
     }
 
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError) {
       throw new Error(`Authentication error: ${userError.message}`)
@@ -149,7 +159,11 @@ export async function getJobContacts(jobId: string) {
       throw new Error(`Database error: ${error.message}`)
     }
 
-    return data?.map(item => item.contacts).filter(contact => contact !== null) || []
+    // PostgREST types embedded relations as arrays; flatten to the
+    // to-one rows this join actually returns.
+    return (data ?? []).flatMap(item =>
+      (Array.isArray(item.contacts) ? item.contacts : [item.contacts]).filter(Boolean)
+    ) as unknown as LinkedContact[]
   } catch (error) {
     console.error('Error in getJobContacts:', {
       error: error instanceof Error ? error.message : String(error),
@@ -160,13 +174,13 @@ export async function getJobContacts(jobId: string) {
   }
 }
 
-export async function getContactJobs(contactId: string) {
+export async function getContactJobs(contactId: string): Promise<LinkedJob[]> {
   try {
     if (!contactId || contactId.trim() === '') {
       throw new Error('Contact ID is required')
     }
 
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError) {
       throw new Error(`Authentication error: ${userError.message}`)
@@ -195,7 +209,11 @@ export async function getContactJobs(contactId: string) {
       throw new Error(`Database error: ${error.message}`)
     }
 
-    return data?.map(item => item.jobs).filter(job => job !== null) || []
+    // PostgREST types embedded relations as arrays; flatten to the
+    // to-one rows this join actually returns.
+    return (data ?? []).flatMap(item =>
+      (Array.isArray(item.jobs) ? item.jobs : [item.jobs]).filter(Boolean)
+    ) as unknown as LinkedJob[]
   } catch (error) {
     console.error('Error in getContactJobs:', {
       error: error instanceof Error ? error.message : String(error),
@@ -224,7 +242,7 @@ export async function getJobsForContacts(
       return {}
     }
 
-    const supabase = createClientComponentClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError) {
       throw new Error(`Authentication error: ${userError.message}`)

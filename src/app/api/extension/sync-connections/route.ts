@@ -1,28 +1,22 @@
-// API endpoint to sync mutual connections from LinkedIn to a contact
-// Uses API key authentication for the Chrome extension
+// API endpoint to sync mutual connections from LinkedIn to a contact.
+// Authenticates with the extension user's Supabase access token (Bearer).
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { authenticateBearer } from '@/lib/api-auth'
+import { sanitizeFilterValue } from '@/lib/sanitize'
 import { mergeNames } from '@/lib/nameMatching'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const extensionApiKey = process.env.EXTENSION_API_KEY
-
-// Default user ID for extension operations (same as n8n)
-const defaultUserId = process.env.N8N_DEFAULT_USER_ID
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key
-    const apiKey = request.headers.get('x-api-key')
-
-    if (!apiKey || apiKey !== extensionApiKey) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid or missing API key' },
-        { status: 401 }
-      )
+    // Authenticate as the signed-in user. This route writes to contacts, so
+    // running it under the caller's RLS context (rather than the service-role
+    // key + a hardcoded N8N_DEFAULT_USER_ID) is what keeps a leaked static
+    // key from being able to modify another tenant's data.
+    const auth = await authenticateBearer(request)
+    if (!auth.ok) {
+      return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
     }
+    const { supabase, userId } = auth
 
     // Parse request body
     const body = await request.json()
@@ -46,15 +40,16 @@ export async function POST(request: NextRequest) {
     const normalizedUrl = normalizeLinkedInUrl(linkedin_url)
     const username = extractUsername(linkedin_url)
 
-    // Create Supabase client with service role key (bypasses RLS)
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    // PostgREST filter metacharacters must be stripped before interpolation.
+    const safeNormalizedUrl = sanitizeFilterValue(normalizedUrl)
+    const safeUsername = sanitizeFilterValue(username)
 
     // Look up contact by LinkedIn URL
     const { data: contact, error: lookupError } = await supabase
       .from('contacts')
       .select('id, name, mutual_connections')
-      .eq('user_id', defaultUserId)
-      .or(`linkedin_url.ilike.%${normalizedUrl}%,linkedin_url.ilike.%${username}%`)
+      .eq('user_id', userId)
+      .or(`linkedin_url.ilike.%${safeNormalizedUrl}%,linkedin_url.ilike.%${safeUsername}%`)
       .limit(1)
       .single()
 
@@ -96,6 +91,7 @@ export async function POST(request: NextRequest) {
       .from('contacts')
       .update({ mutual_connections: merged })
       .eq('id', contact.id)
+      .eq('user_id', userId)
 
     if (updateError) {
       console.error('Sync connections update error:', updateError)
@@ -105,7 +101,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Synced ${added.length} connections to contact ${contact.name} (${contact.id})`)
+    console.log(`Synced ${added.length} connections to contact ${contact.id}`)
 
     return NextResponse.json({
       success: true,
@@ -164,9 +160,12 @@ export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      // Content scripts run on LinkedIn pages, so the browser sends that
+      // origin. Scoped rather than '*' so arbitrary sites cannot preflight.
+      'Access-Control-Allow-Origin': 'https://www.linkedin.com',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Vary': 'Origin',
     },
   })
 }

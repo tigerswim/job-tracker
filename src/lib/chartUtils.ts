@@ -2,9 +2,10 @@
 
 import { Granularity, TimeSeriesDataPoint } from '@/components/charts/chartConfig'
 
-interface DateItem {
-  [key: string]: unknown
-}
+// Callers pass their own row types (Contact, Job, Interaction). The date and
+// category fields are named via `keyof T`, so no index signature is needed —
+// requiring one would exclude every interface-typed row.
+type DateItem = object
 
 /**
  * Get the start of the week (Monday) for a given date

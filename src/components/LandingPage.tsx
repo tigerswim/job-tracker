@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Rocket, Briefcase, Users, BarChart3, Upload, User, Building, Mail, Phone, Linkedin, Network } from 'lucide-react'
 import { Montserrat, Manrope } from 'next/font/google'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 
 const montserrat = Montserrat({ subsets: ['latin'], weight: ['900'] })
 const manrope = Manrope({ subsets: ['latin'], weight: ['400', '600'] })
@@ -17,7 +17,7 @@ export default function LandingPage() {
   const [message, setMessage] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
 
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseBrowserClient()
 
   const handleGoogleSignIn = async () => {
     setLoading(true)

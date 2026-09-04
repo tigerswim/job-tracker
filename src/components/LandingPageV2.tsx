@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Rocket, Briefcase, Users, BarChart3, Upload, User, Building, Mail, Linkedin, X } from 'lucide-react'
 import { DM_Sans, Archivo } from 'next/font/google'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 
 const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '700'] })
 const archivo = Archivo({ subsets: ['latin'], weight: ['600', '700', '800'] })
@@ -17,7 +17,7 @@ export default function LandingPageV2() {
   const [message, setMessage] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
 
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseBrowserClient()
 
   const handleGoogleSignIn = async () => {
     setLoading(true)

@@ -2,7 +2,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 import { User } from '@supabase/supabase-js'
 import JobList from '@/components/JobList'
 import ContactList from '@/components/ContactList'
@@ -23,7 +23,7 @@ import { DM_Sans, Archivo } from 'next/font/google'
 
 const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '700'] })
 const archivo = Archivo({ subsets: ['latin'], weight: ['600', '700', '800'] })
-const supabase = createClientComponentClient()
+const supabase = createSupabaseBrowserClient()
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'jobs' | 'contacts' | 'reporting' | 'csv'>('jobs')

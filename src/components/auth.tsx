@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 import { LogIn, UserPlus, Eye, EyeOff } from 'lucide-react'
 
 interface AuthProps {
@@ -15,8 +15,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  // Initialize Supabase client using createClientComponentClient
-  const supabase = createClientComponentClient()
+  // Initialize the browser Supabase client
+  const supabase = createSupabaseBrowserClient()
 
   // Handle OAuth session on component mount
   useEffect(() => {
@@ -90,10 +90,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
     setLoading(true)
     setError(null)
     try {
-      const { error } = await supabase.auth.resetPassword(
-        { email },
-        { redirectTo: `${window.location.origin}/update-password` }
-      )
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password`,
+      })
       if (error) throw error
       setMessage('Password reset email sent!')
     } catch (error: any) {

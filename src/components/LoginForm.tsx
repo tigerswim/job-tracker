@@ -1,7 +1,7 @@
 // src/components/LoginForm.tsx
 'use client'
 import { useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase-ssr/client'
 
 export default function LoginForm() {
   const [isSignUp, setIsSignUp] = useState(false)
@@ -10,8 +10,8 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
-  // Initialize Supabase client using createClientComponentClient
-  const supabase = createClientComponentClient()
+  // Initialize the browser Supabase client
+  const supabase = createSupabaseBrowserClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
