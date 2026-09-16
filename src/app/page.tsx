@@ -26,7 +26,7 @@ const archivo = Archivo({ subsets: ['latin'], weight: ['600', '700', '800'] })
 const supabase = createSupabaseBrowserClient()
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'jobs' | 'contacts' | 'reporting' | 'csv'>('jobs')
+  const [activeTab, setActiveTab] = useState<'jobs' | 'contacts' | 'reporting' | 'csv'>('contacts')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [initialContactId, setInitialContactId] = useState<string | null>(null)
