@@ -62,10 +62,50 @@ export async function POST(request: NextRequest) {
     }
 
     if (!contact) {
-      return NextResponse.json(
-        { success: false, error: 'Contact not found with that LinkedIn URL' },
-        { status: 404 }
-      )
+      // Without a name we can't create a usable contact (older extension builds
+      // don't send one), so keep the original not-found behavior.
+      const name = typeof body.name === 'string' ? body.name.trim() : ''
+      if (!name || !username) {
+        return NextResponse.json(
+          { success: false, error: 'Contact not found with that LinkedIn URL' },
+          { status: 404 }
+        )
+      }
+
+      // Create a placeholder so connections can be saved before the profile PDF
+      // is processed. The URL is stored in the exact form the n8n PDF route
+      // matches on, so that route updates this row instead of duplicating it.
+      const { merged } = mergeNames([], mutual_connections)
+      const { data: created, error: insertError } = await supabase
+        .from('contacts')
+        .insert([{
+          user_id: userId,
+          name,
+          linkedin_url: `https://www.linkedin.com/in/${username}`,
+          notes: typeof body.headline === 'string' && body.headline.trim() ? body.headline.trim() : null,
+          source: 'linkedin extension',
+          mutual_connections: merged,
+        }])
+        .select('id, name')
+        .single()
+
+      if (insertError || !created) {
+        console.error('Sync connections insert error:', insertError)
+        return NextResponse.json(
+          { success: false, error: 'Failed to create contact' },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        created: true,
+        contact_id: created.id,
+        contact_name: created.name,
+        added: merged,
+        already_existed: [],
+        total_connections: merged.length
+      })
     }
 
     // Get existing mutual connections

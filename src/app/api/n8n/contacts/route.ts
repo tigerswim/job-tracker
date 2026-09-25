@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { secretsMatch } from '@/lib/api-auth'
+import { mergeNames } from '@/lib/nameMatching'
 
 // Validate API key from header.
 // n8n is server-to-server (no user session), so a shared secret is the right
@@ -174,6 +175,12 @@ export async function POST(request: NextRequest) {
         .update({
           ...contactData,
           notes: updatedNotes || contactData.notes,
+          // Connections synced from the extension aren't in the PDF, so merge
+          // rather than overwrite (a PDF usually carries none at all).
+          mutual_connections: mergeNames(
+            Array.isArray(existingContact.mutual_connections) ? existingContact.mutual_connections : [],
+            contactData.mutual_connections
+          ).merged,
           updated_at: new Date().toISOString()
         })
         .eq('id', existingContact.id)

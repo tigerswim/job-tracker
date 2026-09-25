@@ -113,6 +113,8 @@ All API routes follow consistent patterns:
   - Historical data preserved in `notes` field with timestamps
   - Old experience/education entries archived in JSON format
   - User-entered notes preserved after historical data
+  - `mutual_connections` are **merged**, never replaced — the PDF carries none, and the extension may have synced some already
+- **Placeholder contacts**: `/api/extension/sync-connections` creates a contact (name, headline in notes, `source: 'linkedin extension'`) when no LinkedIn URL matches and the extension sends `name`. It stores the URL as `https://www.linkedin.com/in/<username>` — the exact form the n8n route matches with `.in()` — so a later PDF updates that row instead of duplicating it. Without `name` it still returns 404.
 - **Authentication**: API key-based (`x-api-key` header with `N8N_API_KEY` env var), compared in constant time via `secretsMatch` in `src/lib/api-auth.ts`
 - **Cost**: ~$0.02-0.03 per resume (Claude API for data extraction)
 - **Workflow**: PDF → pdfjs-dist extraction → Claude API → POST to endpoint → Move to processed folder
@@ -521,7 +523,7 @@ Symptom: connection pills show the name **twice** ("Tia Cummings-Hopkins Tia Cum
   - `src/lib/__tests__/` — filter sanitization, constant-time secret compare
   - `src/app/api/__tests__/` — authorization gates for all 20 route handlers
 - **`npm test` also runs `tsc --noEmit`** — type errors fail the suite
-- **146 tests** as of 2026-09-04
+- **148 tests** as of 2026-09-25
 
 ### API Route Authorization Tests
 `src/app/api/__tests__/` covers every non-OPTIONS handler, split by auth
